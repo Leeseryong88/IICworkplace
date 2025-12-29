@@ -6,10 +6,11 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
+  User,
 } from 'firebase/auth'
 
 export function useAuth() {
-  const [user, setUser] = useState<ReturnType<typeof auth.currentUser> | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
