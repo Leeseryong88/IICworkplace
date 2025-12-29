@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 관리자 이메일 목록
+    function isAdmin() {
+      return request.auth != null && 
+             (request.auth.token.email == 'kidcap1001@naver.com' || 
+              request.auth.token.email == 'kidcap1002@naver.com');
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /workspaces/{workspaceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /zones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
