@@ -321,10 +321,16 @@ function FloorCanvas({ planUrl, zones }: { planUrl: string; zones: Zone[] }) {
             const cx = x + w / 2
             const cy = y + h / 2
             
-            // 글자 크기를 구역 너비와 높이에 맞춰 유동적으로 조절 (최소 6px, 최대 16px)
+            // 글자 크기를 구역 너비와 높이에 맞춰 유동적으로 조절
+            // 가로 너비 기준: (구역 너비 / 글자 수)에 비례하되, 너무 커지지 않게 조절
+            // 세로 높이 기준: 구역 높이의 25%를 넘지 않게 조절
             const textLen = (z.project || z.name).length || 1
-            const fs = Math.max(6, Math.min(w / textLen * 1.5, h * 0.3, 16))
-            const dateFs = fs * 0.75
+            const horizontalLimit = (w / textLen) * 1.2 // 가로 여유 계수 하향 조정
+            const verticalLimit = h * 0.25 // 세로 여유 계수 하향 조정
+            
+            // 최종 글자 크기: 가로/세로 제한 중 작은 값을 선택하고, 최대 14px로 제한
+            const fs = Math.max(6, Math.min(horizontalLimit, verticalLimit, 14))
+            const dateFs = Math.max(5, fs * 0.8)
 
             return (
               <g key={z.id} onClick={() => setSelected(z)} style={{ cursor: 'pointer' }}>
