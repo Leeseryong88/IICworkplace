@@ -50,6 +50,10 @@ export default function AdminPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('')
   const [zoneModalOpen, setZoneModalOpen] = useState(false)
+  
+  // 공용 기간 필터 상태 (작업장 관리와 구역 편집에서 공유)
+  const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
 
   // 섹션 접힘 상태 관리
   const [showWorkspaces, setShowWorkspaces] = useState(true)
@@ -92,6 +96,10 @@ export default function AdminPage() {
           setSelectedCategoryId={setSelectedCategoryId}
           setSelectedWorkspaceId={setSelectedWorkspaceId}
           openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }}
+          filterStart={filterStart}
+          setFilterStart={setFilterStart}
+          filterEnd={filterEnd}
+          setFilterEnd={setFilterEnd}
         />
       </CollapsibleSection>
 
@@ -104,7 +112,14 @@ export default function AdminPage() {
       </CollapsibleSection>
 
       {zoneModalOpen && (
-        <ZoneEditorModal activeWorkspaceId={selectedWorkspaceId} onClose={() => setZoneModalOpen(false)} />
+        <ZoneEditorModal 
+          activeWorkspaceId={selectedWorkspaceId} 
+          onClose={() => setZoneModalOpen(false)} 
+          filterStart={filterStart}
+          setFilterStart={setFilterStart}
+          filterEnd={filterEnd}
+          setFilterEnd={setFilterEnd}
+        />
       )}
     </div>
   )
@@ -139,6 +154,7 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentDate, setCurrentDate] = useState(new Date())
 
   useEffect(() => {
@@ -163,18 +179,32 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
     return () => { unsubZones(); unsubWs(); unsubCats(); }
   }, [])
 
-  const filteredZones = zones.filter(z => {
-    const ws = workspaces.find(w => w.id === z.workspaceId)
-    const cat = categories.find(c => c.id === ws?.categoryId)
-    
-    // 브랜드 필터링
-    if (selectedBrands.length > 0 && (!z.brand || !selectedBrands.includes(z.brand))) {
-      return false
-    }
+  const filteredZones = useMemo(() => {
+    const filtered = zones.filter(z => {
+      const ws = workspaces.find(w => w.id === z.workspaceId)
+      const cat = categories.find(c => c.id === ws?.categoryId)
+      
+      // 브랜드 필터링
+      if (selectedBrands.length > 0 && (!z.brand || !selectedBrands.includes(z.brand))) {
+        return false
+      }
 
-    const searchStr = `${z.team || ''} ${z.name || ''} ${z.project || ''} ${z.manager || ''} ${z.brand || ''} ${ws?.name || ''} ${cat?.name || ''}`.toLowerCase()
-    return searchStr.includes(searchTerm.toLowerCase())
-  })
+      const searchStr = `${z.team || ''} ${z.name || ''} ${z.project || ''} ${z.manager || ''} ${z.brand || ''} ${ws?.name || ''} ${cat?.name || ''}`.toLowerCase()
+      return searchStr.includes(searchTerm.toLowerCase())
+    })
+
+    // 시작일(startDate) 기준 정렬
+    return [...filtered].sort((a, b) => {
+      const dateA = a.startDate || ''
+      const dateB = b.startDate || ''
+      
+      if (sortOrder === 'asc') {
+        return dateA.localeCompare(dateB)
+      } else {
+        return dateB.localeCompare(dateA)
+      }
+    })
+  }, [zones, workspaces, categories, selectedBrands, searchTerm, sortOrder])
 
   if (loading) return <div className="p-8 text-center text-slate-500">불러오는 중...</div>
 
@@ -249,7 +279,16 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
                 <th className="px-4 py-2 border-b">카테고리</th>
                 <th className="px-4 py-2 border-b">작업장</th>
                 <th className="px-4 py-2 border-b">파트/팀</th>
-                <th className="px-4 py-2 border-b">기간</th>
+                <th 
+                  className="px-4 py-2 border-b cursor-pointer hover:bg-slate-100 transition-colors group"
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                >
+                  <div className="flex items-center gap-1">
+                    기간
+                    <span className={`text-[10px] transition-colors ${sortOrder === 'asc' ? 'text-brand-600' : 'text-slate-300 group-hover:text-slate-500'}`}>▲</span>
+                    <span className={`text-[10px] transition-colors ${sortOrder === 'desc' ? 'text-brand-600' : 'text-slate-300 group-hover:text-slate-500'}`}>▼</span>
+                  </div>
+                </th>
                 <th className="px-4 py-2 border-b">담당자</th>
                 <th className="px-4 py-2 border-b text-right">작업</th>
               </tr>
@@ -687,11 +726,19 @@ function WorkspacesOverview({
   setSelectedCategoryId,
   setSelectedWorkspaceId,
   openZoneEditor,
+  filterStart,
+  setFilterStart,
+  filterEnd,
+  setFilterEnd,
 }: {
   selectedCategoryId: string
   setSelectedCategoryId: (v: string) => void
   setSelectedWorkspaceId: (v: string) => void
   openZoneEditor: (categoryId: string, workspaceId: string) => void
+  filterStart: string
+  setFilterStart: (v: string) => void
+  filterEnd: string
+  setFilterEnd: (v: string) => void
 }) {
   const [categories, setCategories] = useState<Category[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
@@ -702,8 +749,6 @@ function WorkspacesOverview({
   const [modalWorkspaceName, setModalWorkspaceName] = useState('')
   const [modalPlanFile, setModalPlanFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
-  const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
   
   // 각 도면의 실제 해상도를 저장하여 왜곡 방지
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({})
@@ -1001,17 +1046,53 @@ function WorkspacesOverview({
   )
 }
 
-function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
+function ZoneEditor({ 
+  activeWorkspaceId,
+  filterStart,
+  setFilterStart,
+  filterEnd,
+  setFilterEnd 
+}: { 
+  activeWorkspaceId: string;
+  filterStart: string;
+  setFilterStart: (v: string) => void;
+  filterEnd: string;
+  setFilterEnd: (v: string) => void;
+}) {
   const [planUrl, setPlanUrl] = useState<string | undefined>('')
   const [zones, setZones] = useState<Zone[]>([])
   const [editing, setEditing] = useState<Zone | null>(null)
   const [imgNatural, setImgNatural] = useState<{ w: number; h: number }>({ w: 1000, h: 750 })
   const containerRef = useRef<HTMLDivElement>(null)
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null)
-  
-  // 가시성 제어 및 필터링 상태 추가 (기본값 오늘 날짜)
-  const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [checkedZoneIds, setCheckedZoneIds] = useState<Set<string>>(new Set())
+
+  const filteredZones = useMemo(() => {
+    return zones.filter(z => {
+      if (!filterStart && !filterEnd) return true
+      const zs = z.startDate || ''
+      const ze = z.endDate || ''
+      if (!zs && !ze) return false
+      if (filterStart && ze && ze < filterStart) return false
+      if (filterEnd && zs && zs > filterEnd) return false
+      return true
+    })
+  }, [zones, filterStart, filterEnd])
+
+  // 필터링된 구역이 변경될 때(날짜 변경 등) 모든 구역을 체크된 상태로 초기화
+  useEffect(() => {
+    setCheckedZoneIds(new Set(filteredZones.map(z => z.id)))
+  }, [filteredZones])
+
+  const handleToggleZone = (id: string) => {
+    const next = new Set(checkedZoneIds)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    setCheckedZoneIds(next)
+  }
 
   useEffect(() => {
     if (!activeWorkspaceId) return
@@ -1045,8 +1126,8 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
       workspaceId: activeWorkspaceId,
       points: [],
       rect: undefined,
-      startDate: '',
-      endDate: '',
+      startDate: filterStart,
+      endDate: filterEnd,
       updatedAt: Date.now(),
       active: true,
     })
@@ -1107,16 +1188,8 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
 
             {/* 오버레이 */}
             <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`} preserveAspectRatio="xMidYMid meet">
-              {zones
-                .filter(z => {
-                  if (!filterStart && !filterEnd) return true
-                  const zs = z.startDate || ''
-                  const ze = z.endDate || ''
-                  if (!zs && !ze) return false
-                  if (filterStart && ze && ze < filterStart) return false
-                  if (filterEnd && zs && zs > filterEnd) return false
-                  return true
-                })
+              {filteredZones
+                .filter(z => checkedZoneIds.has(z.id))
                 .map((z) => (
                 z.rect ? (
                   <g key={z.id}>
@@ -1242,20 +1315,16 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
               </div>
 
               <div className="max-h-[480px] space-y-2 overflow-auto pr-1">
-                {zones
-                  .filter(z => {
-                    if (!filterStart && !filterEnd) return true
-                    const zs = z.startDate || ''
-                    const ze = z.endDate || ''
-                    if (!zs && !ze) return false
-                    if (filterStart && ze && ze < filterStart) return false
-                    if (filterEnd && zs && zs > filterEnd) return false
-                    return true
-                  })
-                  .map((z) => (
+                {filteredZones.map((z) => (
                   <div key={z.id} className="rounded border p-2 bg-white transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                          checked={checkedZoneIds.has(z.id)}
+                          onChange={() => handleToggleZone(z.id)}
+                        />
                         <span className="inline-block h-3 w-3 rounded" style={{ backgroundColor: z.color || '#327fff' }} />
                         <div className="text-sm font-medium">{z.team || z.name}</div>
                       </div>
@@ -1264,7 +1333,8 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
                         <button className="rounded border bg-white px-2 py-0.5 text-red-600 hover:bg-red-50" onClick={() => removeZone(z.id)}>삭제</button>
                       </div>
                     </div>
-                    <div className="mt-1 flex flex-col gap-0.5 ml-6">
+                    <div className="mt-1 flex flex-col gap-0.5 ml-12">
+                      {z.project && <div className="text-xs font-semibold text-slate-700">[{z.project}]</div>}
                       {z.purpose && <div className="text-xs text-slate-600 truncate">{z.purpose}</div>}
                       <div className="text-[11px] font-medium text-slate-500">
                         기간: {z.startDate || '미정'} ~ {z.endDate || '미정'}
@@ -1272,7 +1342,7 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
                     </div>
                   </div>
                 ))}
-                {zones.length === 0 && <div className="text-sm text-slate-500">등록된 구역이 없습니다.</div>}
+                {filteredZones.length === 0 && <div className="text-sm text-slate-500">등록된 구역이 없습니다.</div>}
               </div>
             </div>
           ) : (
@@ -1367,12 +1437,32 @@ function ZoneEditor({ activeWorkspaceId }: { activeWorkspaceId: string }) {
   )
 }
 
-function ZoneEditorModal({ activeWorkspaceId, onClose }: { activeWorkspaceId: string; onClose: () => void }) {
+function ZoneEditorModal({ 
+  activeWorkspaceId, 
+  onClose,
+  filterStart,
+  setFilterStart,
+  filterEnd,
+  setFilterEnd
+}: { 
+  activeWorkspaceId: string; 
+  onClose: () => void;
+  filterStart: string;
+  setFilterStart: (v: string) => void;
+  filterEnd: string;
+  setFilterEnd: (v: string) => void;
+}) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="max-h-[95vh] w-full max-w-6xl overflow-auto rounded-lg border bg-white p-4 relative">
         <button className="absolute right-3 top-3 rounded border px-2 py-1 text-sm" onClick={onClose}>닫기</button>
-        <ZoneEditor activeWorkspaceId={activeWorkspaceId} />
+        <ZoneEditor 
+          activeWorkspaceId={activeWorkspaceId} 
+          filterStart={filterStart}
+          setFilterStart={setFilterStart}
+          filterEnd={filterEnd}
+          setFilterEnd={setFilterEnd}
+        />
       </div>
     </div>
   )

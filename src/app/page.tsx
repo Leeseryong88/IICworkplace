@@ -16,12 +16,12 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeWorkspace, setActiveWorkspace] = useState<string>('')
   const [zones, setZones] = useState<Zone[]>([])
-  const [viewMode, setViewMode] = useState<'plan' | 'list'>('plan')
   const [filterStartDate, setFilterStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
   const [filterEndDate, setFilterEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
   const [allowedCategoryIds, setAllowedCategoryIds] = useState<string[] | null>(null)
   const [sidebarOrder, setSidebarOrder] = useState<string[] | null>(null)
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
+  const [checkedZoneIds, setCheckedZoneIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const unsubCats = onSnapshot(query(collection(db, 'categories'), orderBy('name', 'asc')), (snap) => {
@@ -94,6 +94,26 @@ export default function HomePage() {
       return z.startDate <= end && z.endDate >= start
     })
   }, [zones, filterStartDate, filterEndDate])
+
+  // 필터링된 구역이 변경될 때(날짜 변경 등) 모든 구역을 체크된 상태로 초기화
+  useEffect(() => {
+    setCheckedZoneIds(new Set(filteredZones.map(z => z.id)))
+  }, [filteredZones])
+
+  const handleToggleZone = (id: string) => {
+    const next = new Set(checkedZoneIds)
+    if (next.has(id)) {
+      next.delete(id)
+    } else {
+      next.add(id)
+    }
+    setCheckedZoneIds(next)
+  }
+
+  // 도면에 표시할 구역: 날짜 필터링된 구역 중 체크된 것만
+  const displayZones = useMemo(() => {
+    return filteredZones.filter(z => checkedZoneIds.has(z.id))
+  }, [filteredZones, checkedZoneIds])
 
   const activeWs = workspaces.find((w) => w.id === activeWorkspace)
 
@@ -180,7 +200,7 @@ export default function HomePage() {
                           <span className="font-medium">
                             {filterStartDate ? (
                               filterEndDate ? `${filterStartDate} ~ ${filterEndDate}` : `${filterStartDate} ~ 선택 중...`
-                            ) : '날짜 범위를 선택하세요'}
+                            ) : '예약된 모든 공간 보기'}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400">▼</span>
@@ -189,57 +209,53 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              {(filterStartDate !== format(new Date(), 'yyyy-MM-dd') || filterEndDate !== format(new Date(), 'yyyy-MM-dd')) && (
-                <button 
-                  className="text-xs text-slate-500 hover:text-red-500 hover:underline"
-                  onClick={() => { 
-                    const today = format(new Date(), 'yyyy-MM-dd');
-                    setFilterStartDate(today); 
-                    setFilterEndDate(today);
-                  }}
-                >
-                  필터 초기화 (오늘)
-                </button>
-              )}
-            </div>
-
-            {/* 도면/목록 토글 스위치 */}
-            <div className="flex rounded-lg bg-slate-100 p-1 shadow-inner">
-              <button
-                className={`flex items-center gap-1 rounded-md px-4 py-1.5 text-sm font-medium transition-all ${
-                  viewMode === 'plan' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-                onClick={() => setViewMode('plan')}
-              >
-                🖼️ 도면
-              </button>
-              <button
-                className={`flex items-center gap-1 rounded-md px-4 py-1.5 text-sm font-medium transition-all ${
-                  viewMode === 'list' ? 'bg-white text-brand-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-                onClick={() => setViewMode('list')}
-              >
-                📋 목록
-              </button>
+              <div className="flex items-center gap-2">
+                {(filterStartDate !== format(new Date(), 'yyyy-MM-dd') || filterEndDate !== format(new Date(), 'yyyy-MM-dd')) && (
+                  <button 
+                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-brand-600"
+                    onClick={() => { 
+                      const today = format(new Date(), 'yyyy-MM-dd');
+                      setFilterStartDate(today); 
+                      setFilterEndDate(today);
+                    }}
+                  >
+                    오늘로 초기화
+                  </button>
+                )}
+                {(filterStartDate || filterEndDate) && (
+                  <button 
+                    className="rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:text-brand-800"
+                    onClick={() => { 
+                      setFilterStartDate(''); 
+                      setFilterEndDate('');
+                    }}
+                  >
+                    ✨ 예약된 모든 공간 보기
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
           <div className="relative min-h-[500px] w-full overflow-hidden rounded-lg border bg-white shadow-md">
-            {viewMode === 'plan' ? (
-              activeWs?.planUrl ? (
-                <FloorCanvas planUrl={activeWs.planUrl} zones={filteredZones} />
-              ) : (
-                <div className="flex h-full items-center justify-center text-slate-500">도면이 없습니다.</div>
-              )
+            {activeWs?.planUrl ? (
+              <FloorCanvas planUrl={activeWs.planUrl} zones={displayZones} />
             ) : (
-              <ZoneListView zones={filteredZones} />
+              <div className="flex h-full items-center justify-center text-slate-500">도면이 없습니다.</div>
             )}
           </div>
-          {viewMode === 'plan' && (
-            <div className="text-right text-xs text-slate-500">
-              * 지정한 기간에 예약이 있는 구역들만 표시됩니다.
+          <div className="space-y-4">
+            <div className="overflow-hidden rounded-lg border bg-white shadow-md">
+              <ZoneListView 
+                zones={filteredZones} 
+                checkedZoneIds={checkedZoneIds} 
+                onToggleZone={handleToggleZone} 
+              />
             </div>
-          )}
+            <div className="text-right text-xs text-slate-500">
+              * {filterStartDate ? '지정한 기간에 예약이 있는 구역들이 표시됩니다.' : '예약된 모든 구역이 표시됩니다.'} 체크박스를 통해 도면에 표시할 구역을 선택할 수 있습니다.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -248,7 +264,15 @@ export default function HomePage() {
   )
 }
 
-function ZoneListView({ zones }: { zones: Zone[] }) {
+function ZoneListView({ 
+  zones, 
+  checkedZoneIds, 
+  onToggleZone 
+}: { 
+  zones: Zone[], 
+  checkedZoneIds?: Set<string>, 
+  onToggleZone?: (id: string) => void 
+}) {
   if (zones.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-500">
@@ -263,6 +287,13 @@ function ZoneListView({ zones }: { zones: Zone[] }) {
       <table className="w-full text-left text-sm">
         <thead className="sticky top-0 bg-slate-50 text-slate-600 shadow-sm">
           <tr>
+            {onToggleZone && (
+              <th className="px-4 py-4 w-10">
+                <div className="flex justify-center">
+                  {/* 전체 선택 기능은 일단 생략하거나 간단히 구현 가능 */}
+                </div>
+              </th>
+            )}
             <th className="px-6 py-4 font-semibold">기간</th>
             <th className="px-6 py-4 font-semibold">프로젝트명</th>
             <th className="px-6 py-4 font-semibold">담당자</th>
@@ -272,6 +303,18 @@ function ZoneListView({ zones }: { zones: Zone[] }) {
         <tbody className="divide-y">
           {zones.map((z) => (
             <tr key={z.id} className="hover:bg-slate-50 transition-colors">
+              {onToggleZone && (
+                <td className="px-4 py-4">
+                  <div className="flex justify-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                      checked={checkedZoneIds?.has(z.id) ?? true}
+                      onChange={() => onToggleZone(z.id)}
+                    />
+                  </div>
+                </td>
+              )}
               <td className="px-6 py-4 text-slate-600">
                 {z.startDate || z.endDate ? `${z.startDate || ''} ~ ${z.endDate || ''}` : '-'}
               </td>
