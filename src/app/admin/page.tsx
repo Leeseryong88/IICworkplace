@@ -55,10 +55,8 @@ export default function AdminPage() {
   const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
 
-  // 섹션 접힘 상태 관리
-  const [showWorkspaces, setShowWorkspaces] = useState(true)
-  const [showZoneList, setShowZoneList] = useState(false)
-  const [showSidebar, setShowSidebar] = useState(false)
+  // 상단 탭 상태 관리
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'all-zones' | 'sidebar-settings'>('workspaces')
 
   if (!loading && !user) {
     return <EmailPasswordLogin />
@@ -78,38 +76,103 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="text-sm text-brand-700 hover:underline">← 현황 보기</Link>
-          <h1 className="text-2xl font-bold">관리자 편집</h1>
-        </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-slate-600">{user?.email}</span>
-          <button onClick={() => signOut()} className="rounded-md border px-3 py-1">로그아웃</button>
+    <div className="flex flex-col min-h-screen bg-slate-50">
+      {/* 관리자 헤더 */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-sm font-medium text-brand-700 hover:text-brand-800 transition-colors flex items-center gap-1">
+                <span className="text-lg">←</span> 현황 보기
+              </Link>
+              <h1 className="text-xl font-bold text-slate-900 border-l pl-4 hidden sm:block">관리자 편집</h1>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="hidden md:flex flex-col items-end leading-tight text-sm">
+                <span className="font-semibold text-slate-700">Admin</span>
+                <span className="text-xs text-slate-500">{user?.email}</span>
+              </div>
+              <button 
+                onClick={() => signOut()} 
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition-all hover:bg-slate-50 hover:text-red-600 active:scale-95"
+              >
+                로그아웃
+              </button>
+            </div>
+          </div>
+
+          {/* 상단 탭 (탑바) */}
+          <nav className="flex space-x-1 sm:space-x-8 -mb-px">
+            {[
+              { id: 'workspaces', label: '🏢 작업장 관리', icon: '🏢' },
+              { id: 'all-zones', label: '📋 작업장 사용 현황', icon: '📋' },
+              { id: 'sidebar-settings', label: '⚙️ 사이드바 설정', icon: '⚙️' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`group flex items-center gap-2 py-4 px-1 border-b-2 font-bold text-sm transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? 'border-brand-600 text-brand-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                <span>{tab.label}</span>
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
 
-      <CollapsibleSection title="작업장 관리" isOpen={showWorkspaces} onToggle={() => setShowWorkspaces(!showWorkspaces)}>
-        <WorkspacesOverview
-          selectedCategoryId={selectedCategoryId}
-          setSelectedCategoryId={setSelectedCategoryId}
-          setSelectedWorkspaceId={setSelectedWorkspaceId}
-          openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }}
-          filterStart={filterStart}
-          setFilterStart={setFilterStart}
-          filterEnd={filterEnd}
-          setFilterEnd={setFilterEnd}
-        />
-      </CollapsibleSection>
+      {/* 메인 컨텐츠 영역 */}
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+        <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[calc(100vh-200px)]">
+          {activeTab === 'workspaces' && (
+            <div className="animate-in fade-in duration-300">
+              <div className="bg-slate-50 px-6 py-4 border-b">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-xl">🏢</span> 작업장 관리
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">카테고리를 생성하고 도면 및 예약 구역을 설정합니다.</p>
+              </div>
+              <WorkspacesOverview
+                selectedCategoryId={selectedCategoryId}
+                setSelectedCategoryId={setSelectedCategoryId}
+                setSelectedWorkspaceId={setSelectedWorkspaceId}
+                openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }}
+                filterStart={filterStart}
+                setFilterStart={setFilterStart}
+                filterEnd={filterEnd}
+                setFilterEnd={setFilterEnd}
+              />
+            </div>
+          )}
 
-      <CollapsibleSection title="전체보기" isOpen={showZoneList} onToggle={() => setShowZoneList(!showZoneList)}>
-        <AllZonesList openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }} />
-      </CollapsibleSection>
+          {activeTab === 'all-zones' && (
+            <div className="animate-in fade-in duration-300">
+              <div className="bg-slate-50 px-6 py-4 border-b">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-xl">📋</span> 작업장 사용 현황
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업장의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
+              </div>
+              <AllZonesList openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }} />
+            </div>
+          )}
 
-      <CollapsibleSection title="사이드바 설정" isOpen={showSidebar} onToggle={() => setShowSidebar(!showSidebar)}>
-        <SidebarSettings />
-      </CollapsibleSection>
+          {activeTab === 'sidebar-settings' && (
+            <div className="animate-in fade-in duration-300">
+              <div className="bg-slate-50 px-6 py-4 border-b">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-xl">⚙️</span> 사이드바 설정
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">메인 페이지 사이드바에 노출할 카테고리와 순서를 구성합니다.</p>
+              </div>
+              <SidebarSettings />
+            </div>
+          )}
+        </div>
+      </main>
 
       {zoneModalOpen && (
         <ZoneEditorModal 
@@ -121,27 +184,6 @@ export default function AdminPage() {
           setFilterEnd={setFilterEnd}
         />
       )}
-    </div>
-  )
-}
-
-function CollapsibleSection({ title, isOpen, onToggle, children }: { title: string, isOpen: boolean, onToggle: () => void, children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border bg-white shadow-sm overflow-hidden">
-      <button 
-        onClick={onToggle}
-        className="flex w-full items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-      >
-        <h2 className="text-lg font-semibold">{title}</h2>
-        <span className={`text-xl transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-          ▼
-        </span>
-      </button>
-      <div className={`transition-all duration-200 ${isOpen ? 'block' : 'hidden'}`}>
-        <div className="border-t p-0">
-          {children}
-        </div>
-      </div>
     </div>
   )
 }
@@ -484,14 +526,15 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZone
                         const colStart = start + 1
                         const colSpan = end - start + 1
                         
+                        const isAbsoluteStart = zs >= weekStart && zs <= weekEnd
+                        const isAbsoluteEnd = ze >= weekStart && ze <= weekEnd
+
                         return (
                           <div 
                             key={z.id}
-                            className="pointer-events-auto cursor-pointer text-[10px] text-white px-2 truncate flex items-center shadow-sm mx-0.5"
+                            className="pointer-events-auto cursor-pointer text-[10px] flex items-center relative h-5 mx-0.5"
                             style={{ 
                               gridColumn: `${colStart} / span ${colSpan}`,
-                              backgroundColor: z.color || '#327fff',
-                              borderRadius: '4px'
                             }}
                             title={`${z.project || '프로젝트'} | ${z.team || z.name} (${z.startDate} ~ ${z.endDate})`}
                             onClick={() => {
@@ -499,9 +542,57 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZone
                               ws && openZoneEditor(ws.categoryId, ws.id)
                             }}
                           >
-                            <span className="font-bold whitespace-nowrap overflow-hidden text-ellipsis">
-                              {z.project ? `[${z.project}] ` : ''}{z.team || z.name}
-                            </span>
+                            {/* 연결 실 (나머지 일) */}
+                            <div 
+                              className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 opacity-60"
+                              style={{ backgroundColor: z.color || '#327fff' }}
+                            />
+                            
+                            {/* 시작일 바 */}
+                            {isAbsoluteStart && (
+                              <div 
+                                className="absolute top-0 bottom-0 rounded shadow-sm flex items-center justify-center z-10"
+                                style={{ 
+                                  left: '0',
+                                  width: `${100 / colSpan}%`,
+                                  backgroundColor: z.color || '#327fff'
+                                }}
+                              >
+                                <span className="text-white font-bold truncate px-1 text-[9px]">
+                                  {z.project || z.team || z.name}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* 종료일 바 (시작일과 겹치지 않을 때만 텍스트 표시 가능) */}
+                            {isAbsoluteEnd && (
+                              <div 
+                                className="absolute top-0 bottom-0 rounded shadow-sm flex items-center justify-center z-10"
+                                style={{ 
+                                  right: '0',
+                                  width: `${100 / colSpan}%`,
+                                  backgroundColor: z.color || '#327fff'
+                                }}
+                              >
+                                {(!isAbsoluteStart || colSpan > 1) && (
+                                  <span className="text-white font-bold truncate px-1 text-[9px]">
+                                    {isAbsoluteStart ? '종료' : (z.project || z.team || z.name)}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 텍스트 (기간이 길어 바가 없는 중간 영역에만 표시) */}
+                            {!isAbsoluteStart && !isAbsoluteEnd && (
+                              <div className="w-full text-center relative z-0">
+                                <span 
+                                  className="px-1 rounded-sm text-[9px] font-medium"
+                                  style={{ color: z.color || '#327fff', backgroundColor: 'white', border: `1px solid ${z.color || '#327fff'}20` }}
+                                >
+                                  {z.project || z.team || z.name}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )
                       })}
