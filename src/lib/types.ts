@@ -46,4 +46,16 @@ export interface Workspace {
   updatedAt: number;
 }
 
+export interface OverseasWork {
+  id: string;
+  projectName: string;
+  brand: string;
+  location: string;
+  manager: string;
+  content: string;
+  startDate: string; // YYYY-MM-DD
+  endDate: string;   // YYYY-MM-DD
+  updatedAt: number;
+}
+
 

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useAuth, emailSignIn, emailSignUp, resetPassword, signOut } from '@/lib/useAuth'
 import { auth, db, storage } from '@/lib/firebase'
-import type { Floor, FloorId, Zone, Category, Workspace } from '@/lib/types'
+import type { Floor, FloorId, Zone, Category, Workspace, OverseasWork } from '@/lib/types'
 import {
   addDoc,
   collection,
@@ -56,7 +56,7 @@ export default function AdminPage() {
   const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
 
   // 상단 탭 상태 관리
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'all-zones' | 'sidebar-settings'>('workspaces')
+  const [activeTab, setActiveTab] = useState<'workspaces' | 'all-zones' | 'overseas-work' | 'sidebar-settings'>('workspaces')
 
   if (!loading && !user) {
     return <EmailPasswordLogin />
@@ -106,6 +106,7 @@ export default function AdminPage() {
             {[
               { id: 'workspaces', label: '🏢 작업장 관리', icon: '🏢' },
               { id: 'all-zones', label: '📋 작업장 사용 현황', icon: '📋' },
+              { id: 'overseas-work', label: '🌏 LAB본부 해외 작업 현황', icon: '🌏' },
               { id: 'sidebar-settings', label: '⚙️ 사이드바 설정', icon: '⚙️' },
             ].map((tab) => (
               <button
@@ -157,6 +158,18 @@ export default function AdminPage() {
                 <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업장의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
               </div>
               <AllZonesList openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }} />
+            </div>
+          )}
+
+          {activeTab === 'overseas-work' && (
+            <div className="animate-in fade-in duration-300">
+              <div className="bg-slate-50 px-6 py-4 border-b">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-xl">🌏</span> LAB본부 해외 작업 현황
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">해외 출장 계획 및 작업 현황을 관리합니다.</p>
+              </div>
+              <OverseasWorkList />
             </div>
           )}
 
@@ -602,6 +615,619 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZone
                     <div className="text-[10px] text-slate-400 pl-2 font-medium">
                       + {rows.length - 6}개 더보기
                     </div>
+                  )}
+                  {rows.length === 0 && <div className="h-12" />}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OverseasWorkList() {
+  const [items, setItems] = useState<OverseasWork[]>([])
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<Partial<OverseasWork> | null>(null)
+  const [inlineDateEditId, setInlineDateEditId] = useState<string | null>(null)
+  const [inlineRange, setInlineRange] = useState<[Date | null, Date | null]>([null, null])
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    const unsub = onSnapshot(query(collection(db, 'overseas_work'), orderBy('updatedAt', 'desc')), (snap) => {
+      const list: OverseasWork[] = []
+      snap.forEach(d => list.push({ id: d.id, ...d.data() } as OverseasWork))
+      setItems(list)
+      setLoading(false)
+    })
+    return () => unsub()
+  }, [])
+
+  const filteredItems = useMemo(() => {
+    return items.filter(item => {
+      if (selectedBrands.length > 0 && !selectedBrands.includes(item.brand)) return false
+      const searchStr = `${item.projectName} ${item.location} ${item.manager} ${item.content} ${item.brand}`.toLowerCase()
+      return searchStr.includes(searchTerm.toLowerCase())
+    })
+  }, [items, selectedBrands, searchTerm])
+
+  const handleSave = async (data: Partial<OverseasWork>) => {
+    try {
+      const payload = {
+        ...data,
+        updatedAt: Date.now()
+      }
+      if (data.id) {
+        const { id, ...rest } = payload
+        await updateDoc(doc(db, 'overseas_work', id!), rest)
+      } else {
+        await addDoc(collection(db, 'overseas_work'), payload)
+      }
+      setModalOpen(false)
+      setEditingItem(null)
+    } catch (e) {
+      console.error(e)
+      alert('저장 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (confirm('정말 삭제하시겠습니까?')) {
+      try {
+        await deleteDoc(doc(db, 'overseas_work', id))
+      } catch (e) {
+        console.error(e)
+        alert('삭제 중 오류가 발생했습니다.')
+      }
+    }
+  }
+
+  const handleInlineDateSave = async (id: string) => {
+    const [start, end] = inlineRange
+    if (!start || !end) {
+      alert('시작일과 종료일을 모두 선택해주세요.')
+      return
+    }
+    try {
+      await updateDoc(doc(db, 'overseas_work', id), {
+        startDate: format(start, 'yyyy-MM-dd'),
+        endDate: format(end, 'yyyy-MM-dd'),
+        updatedAt: Date.now()
+      })
+      setInlineDateEditId(null)
+      setInlineRange([null, null])
+    } catch (e) {
+      console.error(e)
+      alert('저장 중 오류가 발생했습니다.')
+    }
+  }
+
+  if (loading) return <div className="p-8 text-center text-slate-500">불러오는 중...</div>
+
+  return (
+    <div className="p-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center gap-4">
+          <input 
+            type="text" 
+            placeholder="프로젝트, 장소, 담당자 등으로 검색..." 
+            className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          
+          <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
+            <span className="text-xs font-semibold text-slate-400 mr-1">브랜드:</span>
+            {Object.entries(BRAND_CONFIG).filter(([key]) => key !== 'LAB').map(([key, cfg]) => {
+              const isSelected = selectedBrands.includes(key);
+              return (
+                <button
+                  key={key}
+                  onClick={() => {
+                    setSelectedBrands(prev => 
+                      isSelected ? prev.filter(b => b !== key) : [...prev, key]
+                    )
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-all border-2 ${
+                    isSelected 
+                      ? 'border-slate-800 ring-1 ring-slate-100 shadow-sm' 
+                      : 'border-transparent bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
+                  style={isSelected ? { backgroundColor: cfg.color, color: 'white' } : {}}
+                >
+                  {cfg.name}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border bg-slate-50 p-1">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              목록
+            </button>
+            <button 
+              onClick={() => setViewMode('calendar')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              달력
+            </button>
+          </div>
+          <button 
+            onClick={() => { setEditingItem(null); setModalOpen(true); }}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:bg-brand-700 active:scale-95"
+          >
+            + 새 작업 등록
+          </button>
+        </div>
+      </div>
+
+      {viewMode === 'list' ? (
+        <div className="overflow-x-auto rounded border">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-slate-50 text-slate-600 font-medium">
+              <tr>
+                <th className="px-4 py-2 border-b">프로젝트명</th>
+                <th className="px-4 py-2 border-b">브랜드</th>
+                <th className="px-4 py-2 border-b">작업장소(해외)</th>
+                <th className="px-4 py-2 border-b">담당자</th>
+                <th className="px-4 py-2 border-b">작업내용</th>
+                <th className="px-4 py-2 border-b">출장 계획</th>
+                <th className="px-4 py-2 border-b text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y bg-white">
+              {filteredItems.map(item => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 text-slate-700 font-medium">{item.projectName}</td>
+                  <td className="px-4 py-3">
+                    <span 
+                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
+                      style={{ backgroundColor: BRAND_CONFIG[item.brand]?.color || '#327fff' }}
+                    >
+                      {BRAND_CONFIG[item.brand]?.name || item.brand}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{item.location}</td>
+                  <td className="px-4 py-3 text-slate-600">{item.manager}</td>
+                  <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{item.content}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs relative">
+                    {inlineDateEditId === item.id ? (
+                      <div 
+                        className="fixed z-[100] bg-white shadow-2xl border border-slate-200 rounded-xl p-3 animate-in fade-in zoom-in duration-200"
+                        style={{ 
+                          top: `${popoverPos.top}px`, 
+                          left: `${popoverPos.left}px`,
+                          transform: popoverPos.left > window.innerWidth - 300 ? 'translateX(-100%)' : 'none'
+                        }}
+                      >
+                        <div className="mb-2 text-[11px] font-bold text-slate-700 flex justify-between items-center">
+                          <span>출장 기간 선택</span>
+                          <span className="text-brand-600">
+                            {inlineRange[0] ? format(inlineRange[0], 'MM.dd') : ''} 
+                            {inlineRange[1] ? ` ~ ${format(inlineRange[1], 'MM.dd')}` : ''}
+                          </span>
+                        </div>
+                        <DatePicker
+                          selectsRange
+                          startDate={inlineRange[0]}
+                          endDate={inlineRange[1]}
+                          onChange={(update: [Date | null, Date | null]) => setInlineRange(update)}
+                          inline
+                          locale="ko"
+                        />
+                        <div className="mt-3 flex justify-end gap-2">
+                          <button 
+                            onClick={() => { setInlineDateEditId(null); setInlineRange([null, null]); }}
+                            className="px-3 py-1.5 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 font-medium transition-colors"
+                          >
+                            취소
+                          </button>
+                          <button 
+                            onClick={() => handleInlineDateSave(item.id)}
+                            className="px-3 py-1.5 bg-brand-600 text-white rounded-lg hover:bg-brand-700 font-medium shadow-sm transition-all active:scale-95"
+                          >
+                            기간 저장
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      item.startDate && item.endDate ? (
+                        <div className="flex items-center gap-2 group">
+                          <span>{item.startDate} ~ {item.endDate}</span>
+                          <button 
+                            onClick={(e) => { 
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setPopoverPos({ top: rect.bottom + 8, left: rect.left });
+                              setInlineDateEditId(item.id!); 
+                              setInlineRange([parseISO(item.startDate), parseISO(item.endDate)]); 
+                            }}
+                            className="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline transition-opacity"
+                          >
+                            수정
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={(e) => { 
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setPopoverPos({ top: rect.bottom + 8, left: rect.left });
+                            setInlineDateEditId(item.id!); 
+                            setInlineRange([new Date(), new Date()]); 
+                          }}
+                          className="text-brand-600 hover:text-brand-700 hover:underline font-bold flex items-center gap-1"
+                        >
+                          📅 기간 지정하기
+                        </button>
+                      )
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right space-x-1">
+                    <button 
+                      onClick={() => { setEditingItem(item); setModalOpen(true); }}
+                      className="rounded border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700 hover:bg-brand-100"
+                    >
+                      편집
+                    </button>
+                    <button 
+                      onClick={() => item.id && handleDelete(item.id)}
+                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                    >
+                      삭제
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredItems.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
+                    등록된 해외 작업 현황이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <OverseasCalendarView 
+          items={filteredItems} 
+          currentDate={currentDate} 
+          setCurrentDate={setCurrentDate}
+          onEdit={(item) => { setEditingItem(item); setModalOpen(true); }}
+        />
+      )}
+
+      {modalOpen && (
+        <OverseasWorkModal 
+          item={editingItem} 
+          onClose={() => setModalOpen(false)} 
+          onSave={handleSave} 
+        />
+      )}
+    </div>
+  )
+}
+
+function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWork> | null, onClose: () => void, onSave: (data: Partial<OverseasWork>) => void }) {
+  const [hasPeriod, setHasPeriod] = useState(!!(item?.startDate && item?.endDate))
+  const [formData, setFormData] = useState<Partial<OverseasWork>>(item || {
+    projectName: '',
+    brand: 'GM',
+    location: '',
+    manager: '',
+    content: '',
+    startDate: format(new Date(), 'yyyy-MM-dd'),
+    endDate: format(new Date(), 'yyyy-MM-dd'),
+  })
+
+  const handleSubmit = () => {
+    const dataToSave = { ...formData }
+    if (!hasPeriod) {
+      dataToSave.startDate = ''
+      dataToSave.endDate = ''
+    }
+    onSave(dataToSave)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-bold text-slate-900">
+            {item?.id ? '해외 작업 수정' : '해외 작업 등록'}
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">프로젝트명</label>
+            <input 
+              type="text" 
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+              value={formData.projectName}
+              onChange={e => setFormData({...formData, projectName: e.target.value})}
+              placeholder="예: Project Name"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">브랜드</label>
+              <select 
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={formData.brand}
+                onChange={e => setFormData({...formData, brand: e.target.value})}
+              >
+                {Object.keys(BRAND_CONFIG).filter(key => key !== 'LAB').map(key => (
+                  <option key={key} value={key}>{BRAND_CONFIG[key].name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">담당자</label>
+              <input 
+                type="text" 
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+                value={formData.manager}
+                onChange={e => setFormData({...formData, manager: e.target.value})}
+                placeholder="담당자 이름"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">작업장소(해외)</label>
+            <input 
+              type="text" 
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+              value={formData.location}
+              onChange={e => setFormData({...formData, location: e.target.value})}
+              placeholder="예: Paris, France"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">작업내용</label>
+            <textarea 
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 h-24" 
+              value={formData.content}
+              onChange={e => setFormData({...formData, content: e.target.value})}
+              placeholder="작업 내용 상세 기술"
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-500">해외 출장 계획 (기간)</label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={hasPeriod} 
+                  onChange={e => setHasPeriod(e.target.checked)}
+                  className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-xs font-medium text-slate-600">기간 입력</span>
+              </label>
+            </div>
+            {hasPeriod && (
+              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <DatePicker
+                  selected={formData.startDate ? parseISO(formData.startDate) : new Date()}
+                  onChange={(date) => setFormData({ ...formData, startDate: format(date || new Date(), 'yyyy-MM-dd') })}
+                  dateFormat="yyyy-MM-dd"
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  locale="ko"
+                />
+                <span className="text-slate-400">~</span>
+                <DatePicker
+                  selected={formData.endDate ? parseISO(formData.endDate) : new Date()}
+                  onChange={(date) => setFormData({ ...formData, endDate: format(date || new Date(), 'yyyy-MM-dd') })}
+                  dateFormat="yyyy-MM-dd"
+                  className="w-full rounded-lg border px-3 py-2 text-sm"
+                  locale="ko"
+                />
+              </div>
+            )}
+            {!hasPeriod && (
+              <p className="text-[11px] text-slate-400 italic">출장 기간이 설정되지 않았습니다.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2">
+          <button 
+            onClick={onClose}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            취소
+          </button>
+          <button 
+            onClick={handleSubmit}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 shadow-sm transition-all active:scale-95"
+          >
+            저장하기
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function OverseasCalendarView({ items, currentDate, setCurrentDate, onEdit }: { 
+  items: OverseasWork[], 
+  currentDate: Date, 
+  setCurrentDate: (d: Date) => void,
+  onEdit: (item: OverseasWork) => void
+}) {
+  const monthStart = startOfMonth(currentDate)
+  const monthEnd = endOfMonth(monthStart)
+  const calendarStart = startOfWeek(monthStart)
+  const calendarEnd = endOfWeek(monthEnd)
+
+  const allDays = eachDayOfInterval({
+    start: calendarStart,
+    end: calendarEnd,
+  })
+
+  const weeks: Date[][] = []
+  for (let i = 0; i < allDays.length; i += 7) {
+    weeks.push(allDays.slice(i, i + 7))
+  }
+
+  const monthItems = items.filter(item => {
+    if (!item.startDate || !item.endDate) return false
+    const iStart = parseISO(item.startDate)
+    const iEnd = parseISO(item.endDate)
+    return (iStart <= calendarEnd) && (iEnd >= calendarStart)
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold text-slate-700">
+          {format(currentDate, 'yyyy년 MMMM', { locale: ko })}
+        </h3>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+            className="rounded border p-1 hover:bg-slate-50"
+          >
+            ◀
+          </button>
+          <button 
+            onClick={() => setCurrentDate(new Date())}
+            className="rounded border px-3 py-1 text-sm hover:bg-slate-50"
+          >
+            오늘
+          </button>
+          <button 
+            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+            className="rounded border p-1 hover:bg-slate-50"
+          >
+            ▶
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+        <div className="grid grid-cols-7 border-b bg-slate-50 text-center text-xs font-semibold text-slate-500">
+          {['일', '월', '화', '수', '목', '금', '토'].map(d => (
+            <div key={d} className="py-2">{d}</div>
+          ))}
+        </div>
+        <div className="flex flex-col">
+          {weeks.map((week, weekIdx) => {
+            const weekStart = week[0]
+            const weekEnd = week[6]
+
+            const weekItems = monthItems.filter(item => {
+              const start = parseISO(item.startDate)
+              const end = parseISO(item.endDate)
+              return start <= weekEnd && end >= weekStart
+            })
+
+            const rows: OverseasWork[][] = []
+            const sortedItems = [...weekItems].sort((a, b) => a.startDate.localeCompare(b.startDate))
+
+            sortedItems.forEach(item => {
+              let assigned = false
+              for (let i = 0; i < rows.length; i++) {
+                const canPlace = rows[i].every(ri => {
+                  const ris = parseISO(ri.startDate); const rie = parseISO(ri.endDate)
+                  const s = parseISO(item.startDate); const e = parseISO(item.endDate)
+                  return e < ris || s > rie
+                })
+                if (canPlace) {
+                  rows[i].push(item)
+                  assigned = true
+                  break
+                }
+              }
+              if (!assigned) rows.push([item])
+            })
+
+            return (
+              <div key={weekIdx} className="relative border-b last:border-b-0 min-h-[120px]">
+                <div className="absolute inset-0 grid grid-cols-7 pointer-events-none">
+                  {week.map((day, dayIdx) => {
+                    const isCurrentMonth = isSameMonth(day, monthStart)
+                    const isToday = isSameDay(day, new Date())
+                    return (
+                      <div key={dayIdx} className={`border-r p-1 ${!isCurrentMonth ? 'bg-slate-50/25' : 'bg-white'} ${dayIdx === 6 ? 'border-r-0' : ''}`}>
+                        <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
+                          isToday ? 'bg-brand-600 text-white' : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'
+                        }`}>
+                          {format(day, 'd')}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div className="relative pt-8 pb-2 px-0.5 space-y-1">
+                  {rows.slice(0, 6).map((row, rowIdx) => (
+                    <div key={rowIdx} className="grid grid-cols-7 h-5 relative">
+                      {row.map(item => {
+                        const start_date = parseISO(item.startDate)
+                        const end_date = parseISO(item.endDate)
+                        const start = Math.max(0, differenceInCalendarDays(start_date, weekStart))
+                        const end = Math.min(6, differenceInCalendarDays(end_date, weekStart))
+                        const colStart = start + 1
+                        const colSpan = end - start + 1
+                        
+                        const isAbsoluteStart = start_date >= weekStart && start_date <= weekEnd
+                        const isAbsoluteEnd = end_date >= weekStart && end_date <= weekEnd
+
+                        const color = BRAND_CONFIG[item.brand]?.color || '#327fff'
+
+                        return (
+                          <div 
+                            key={item.id}
+                            className="pointer-events-auto cursor-pointer text-[10px] flex items-center relative h-5 mx-0.5"
+                            style={{ gridColumn: `${colStart} / span ${colSpan}` }}
+                            title={`${item.projectName} | ${item.manager} (${item.startDate} ~ ${item.endDate})`}
+                            onClick={() => onEdit(item)}
+                          >
+                            <div className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 opacity-60" style={{ backgroundColor: color }} />
+                            
+                            {isAbsoluteStart && (
+                              <div className="absolute top-0 bottom-0 rounded shadow-sm flex items-center justify-center z-10"
+                                style={{ left: '0', width: `${100 / colSpan}%`, backgroundColor: color }}
+                              >
+                                <span className="text-white font-bold truncate px-1 text-[9px]">{item.projectName}</span>
+                              </div>
+                            )}
+
+                            {isAbsoluteEnd && (
+                              <div className="absolute top-0 bottom-0 rounded shadow-sm flex items-center justify-center z-10"
+                                style={{ right: '0', width: `${100 / colSpan}%`, backgroundColor: color }}
+                              >
+                                {(!isAbsoluteStart || colSpan > 1) && (
+                                  <span className="text-white font-bold truncate px-1 text-[9px]">{isAbsoluteStart ? '종료' : item.projectName}</span>
+                                )}
+                              </div>
+                            )}
+
+                            {!isAbsoluteStart && !isAbsoluteEnd && (
+                              <div className="w-full text-center relative z-0">
+                                <span className="px-1 rounded-sm text-[9px] font-medium" style={{ color: color, backgroundColor: 'white', border: `1px solid ${color}20` }}>
+                                  {item.projectName}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ))}
+                  {rows.length > 6 && (
+                    <div className="text-[10px] text-slate-400 pl-2 font-medium">+ {rows.length - 6}개 더보기</div>
                   )}
                   {rows.length === 0 && <div className="h-12" />}
                 </div>
