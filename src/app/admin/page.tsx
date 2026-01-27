@@ -51,7 +51,7 @@ export default function AdminPage() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('')
   const [zoneModalOpen, setZoneModalOpen] = useState(false)
   
-  // 공용 기간 필터 상태 (작업장 관리와 구역 편집에서 공유)
+  // 공용 기간 필터 상태 (작업실 관리와 구역 편집에서 공유)
   const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
 
@@ -104,8 +104,8 @@ export default function AdminPage() {
           {/* 상단 탭 (탑바) */}
           <nav className="flex space-x-1 sm:space-x-8 -mb-px">
             {[
-              { id: 'workspaces', label: '🏢 작업장 관리', icon: '🏢' },
-              { id: 'all-zones', label: '📋 작업장 사용 현황', icon: '📋' },
+              { id: 'workspaces', label: '🏢 작업실 관리', icon: '🏢' },
+              { id: 'all-zones', label: '📋 작업실 사용 현황', icon: '📋' },
               { id: 'overseas-work', label: '🌏 LAB본부 해외 작업 현황', icon: '🌏' },
               { id: 'sidebar-settings', label: '⚙️ 사이드바 설정', icon: '⚙️' },
             ].map((tab) => (
@@ -132,7 +132,7 @@ export default function AdminPage() {
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">🏢</span> 작업장 관리
+                  <span className="text-xl">🏢</span> 작업실 관리
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5 ml-8">카테고리를 생성하고 도면 및 예약 구역을 설정합니다.</p>
               </div>
@@ -153,9 +153,9 @@ export default function AdminPage() {
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">📋</span> 작업장 사용 현황
+                  <span className="text-xl">📋</span> 작업실 사용 현황
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업장의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
               </div>
               <AllZonesList openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }} />
             </div>
@@ -269,7 +269,7 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
         <div className="flex flex-wrap items-center gap-4">
           <input 
             type="text" 
-            placeholder="팀명, 작업장, 카테고리 등으로 검색..." 
+            placeholder="팀명, 작업실, 카테고리 등으로 검색..." 
             className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -332,7 +332,7 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
                 <th className="px-4 py-2 border-b">프로젝트명</th>
                 <th className="px-4 py-2 border-b">브랜드</th>
                 <th className="px-4 py-2 border-b">카테고리</th>
-                <th className="px-4 py-2 border-b">작업장</th>
+                <th className="px-4 py-2 border-b">작업실</th>
                 <th className="px-4 py-2 border-b">파트/팀</th>
                 <th 
                   className="px-4 py-2 border-b cursor-pointer hover:bg-slate-100 transition-colors group"
@@ -779,7 +779,7 @@ function OverseasWorkList() {
               <tr>
                 <th className="px-4 py-2 border-b">프로젝트명</th>
                 <th className="px-4 py-2 border-b">브랜드</th>
-                <th className="px-4 py-2 border-b">작업장소(해외)</th>
+                <th className="px-4 py-2 border-b">작업 장소(해외)</th>
                 <th className="px-4 py-2 border-b">담당자</th>
                 <th className="px-4 py-2 border-b">작업내용</th>
                 <th className="px-4 py-2 border-b">출장 계획</th>
@@ -985,7 +985,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">작업장소(해외)</label>
+            <label className="block text-xs font-bold text-slate-500 mb-1">작업 장소(해외)</label>
             <input 
               type="text" 
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
@@ -1368,16 +1368,16 @@ function WorkspaceManager({
 
   const createWorkspace = async () => {
     if (!selectedCategoryId) return alert('카테고리를 먼저 선택하세요')
-    const name = prompt('작업장 명칭을 입력하세요')?.trim()
+    const name = prompt('작업실 명칭을 입력하세요')?.trim()
     if (!name) return
     const docRef = await addDoc(collection(db, 'workspaces'), { name, categoryId: selectedCategoryId, updatedAt: Date.now() })
     setSelectedWorkspaceId(docRef.id)
   }
 
   const deleteWorkspace = async () => {
-    if (!selectedWorkspaceId) return alert('삭제할 작업장을 선택하세요')
+    if (!selectedWorkspaceId) return alert('삭제할 작업실을 선택하세요')
     const ws = workspaces.find(w => w.id === selectedWorkspaceId)
-    if (!confirm(`작업장 "${ws?.name || selectedWorkspaceId}"을(를) 삭제하시겠습니까?\n해당 작업장의 모든 구역도 함께 삭제됩니다.`)) return
+    if (!confirm(`작업실 "${ws?.name || selectedWorkspaceId}"을(를) 삭제하시겠습니까?\n해당 작업실의 모든 구역도 함께 삭제됩니다.`)) return
     // 1) zones 삭제
     const zq = query(collection(db, 'zones'), where('workspaceId', '==', selectedWorkspaceId))
     const zs = await getDocs(zq)
@@ -1396,7 +1396,7 @@ function WorkspaceManager({
     const u = auth.currentUser
     if (!u) { alert('로그인이 필요합니다.'); return }
     await u.getIdToken(true)
-    if (!selectedWorkspaceId) return alert('작업장을 선택하세요')
+    if (!selectedWorkspaceId) return alert('작업실을 선택하세요')
     const ext = file.name.split('.').pop() || 'png'
     const r = ref(storage, `plans/${selectedWorkspaceId}.${ext}`)
     const res = await uploadBytes(r, file)
@@ -1407,10 +1407,10 @@ function WorkspaceManager({
   return (
     <div className="rounded-lg border bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">작업장/카테고리 관리</h2>
+        <h2 className="text-lg font-semibold">작업실/카테고리 관리</h2>
         <div className="flex items-center gap-2">
           <button className="rounded border px-3 py-1 text-sm" onClick={createCategory}>카테고리 추가</button>
-          <button className="rounded border px-3 py-1 text-sm" onClick={createWorkspace}>작업장 추가</button>
+          <button className="rounded border px-3 py-1 text-sm" onClick={createWorkspace}>작업실 추가</button>
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -1467,6 +1467,14 @@ function WorkspacesOverview({
   const [modalPlanFile, setModalPlanFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   
+  // 수정용 상태
+  const [editingCatId, setEditingCatId] = useState<string | null>(null)
+  const [tempCatName, setTempCatName] = useState('')
+  const [editingWsId, setEditingWsId] = useState<string | null>(null)
+  const [tempWsName, setTempWsName] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [changingPlanWsId, setChangingPlanWsId] = useState<string | null>(null)
+
   // 각 도면의 실제 해상도를 저장하여 왜곡 방지
   const [imgDimensions, setImgDimensions] = useState<Record<string, { w: number; h: number }>>({})
 
@@ -1485,7 +1493,7 @@ function WorkspacesOverview({
   }, [])
 
   useEffect(() => {
-    // 실시간으로 모든 구역을 구독하여 작업장별로 분류 (미니 프리뷰용)
+    // 실시간으로 모든 구역을 구독하여 작업실별로 분류 (미니 프리뷰용)
     const q = query(collection(db, 'zones'), orderBy('updatedAt', 'desc'))
     const unsub = onSnapshot(q, (snap) => {
       const results: Record<string, Zone[]> = {}
@@ -1500,6 +1508,51 @@ function WorkspacesOverview({
     })
     return () => unsub()
   }, [])
+
+  const updateCategoryName = async (id: string) => {
+    if (!tempCatName.trim()) return
+    try {
+      await updateDoc(doc(db, 'categories', id), { name: tempCatName.trim(), updatedAt: Date.now() })
+      setEditingCatId(null)
+    } catch (e) {
+      alert('카테고리명 수정에 실패했습니다.')
+    }
+  }
+
+  const updateWorkspaceName = async (id: string) => {
+    if (!tempWsName.trim()) return
+    try {
+      await updateDoc(doc(db, 'workspaces', id), { name: tempWsName.trim(), updatedAt: Date.now() })
+      setEditingWsId(null)
+    } catch (e) {
+      alert('작업실명 수정에 실패했습니다.')
+    }
+  }
+
+  const handlePlanChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !changingPlanWsId) return
+    
+    setSaving(true)
+    try {
+      // 기존 도면 삭제 시도 (필요한 경우)
+      const ws = workspaces.find(w => w.id === changingPlanWsId)
+      
+      const ext = (file.name.split('.').pop() || 'png')
+      const r = ref(storage, `plans/${changingPlanWsId}.${ext}`)
+      const res = await uploadBytes(r, file)
+      const url = await getDownloadURL(res.ref)
+      await updateDoc(doc(db, 'workspaces', changingPlanWsId), { planUrl: url, updatedAt: Date.now() })
+      alert('도면이 변경되었습니다.')
+    } catch (e: any) {
+      console.error(e)
+      alert('도면 변경에 실패했습니다.')
+    } finally {
+      setSaving(false)
+      setChangingPlanWsId(null)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   const byCategory: Record<string, Workspace[]> = {}
   for (const w of workspaces) {
@@ -1536,7 +1589,7 @@ function WorkspacesOverview({
             setModalSelectedCategoryId(defaultCat); 
             setModalNewCategory(''); 
             setShowModal(true); 
-          }}>새 작업장 추가</button>
+          }}>새 작업실 추가</button>
         </div>
       </div>
 
@@ -1544,12 +1597,36 @@ function WorkspacesOverview({
         {categories.map((c) => (
           <div key={c.id}>
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-sm font-semibold text-slate-700">{c.name}</div>
+              <div className="flex items-center gap-2">
+                {editingCatId === c.id ? (
+                  <div className="flex items-center gap-1">
+                    <input 
+                      className="rounded border px-2 py-0.5 text-sm" 
+                      value={tempCatName} 
+                      onChange={(e) => setTempCatName(e.target.value)} 
+                      autoFocus
+                    />
+                    <button className="text-xs text-brand-600 font-bold" onClick={() => updateCategoryName(c.id)}>저장</button>
+                    <button className="text-xs text-slate-400" onClick={() => setEditingCatId(null)}>취소</button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold text-slate-700">{c.name}</div>
+                    <button 
+                      className="text-[10px] text-slate-400 hover:text-brand-600" 
+                      onClick={() => { setEditingCatId(c.id); setTempCatName(c.name); }}
+                      title="카테고리명 수정"
+                    >
+                      📝
+                    </button>
+                  </>
+                )}
+              </div>
               <button
                 className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700"
                 onClick={async () => {
-                  if (!confirm(`카테고리 "${c.name}" 및 하위 모든 작업장을 삭제하시겠습니까?`)) return
-                  // 하위 작업장 조회
+                  if (!confirm(`카테고리 "${c.name}" 및 하위 모든 작업실을 삭제하시겠습니까?`)) return
+                  // 하위 작업실 조회
                   const wsSnap = await getDocs(query(collection(db, 'workspaces'), where('categoryId', '==', c.id)))
                   for (const wd of wsSnap.docs) {
                     const w = { id: wd.id, ...(wd.data() as any) } as Workspace
@@ -1572,14 +1649,36 @@ function WorkspacesOverview({
               {(byCategory[c.id] || []).map((w) => (
                 <div key={w.id} className="rounded border p-2">
                   <div className="mb-2 flex items-center justify-between">
-                    <div className="truncate text-sm font-medium">{w.name}</div>
-                    <div className="flex items-center gap-1">
+                    {editingWsId === w.id ? (
+                      <div className="flex items-center gap-1 flex-1 mr-2">
+                        <input 
+                          className="w-full rounded border px-2 py-0.5 text-sm" 
+                          value={tempWsName} 
+                          onChange={(e) => setTempWsName(e.target.value)} 
+                          autoFocus
+                        />
+                        <button className="text-xs text-brand-600 font-bold whitespace-nowrap" onClick={() => updateWorkspaceName(w.id)}>저장</button>
+                        <button className="text-xs text-slate-400 whitespace-nowrap" onClick={() => setEditingWsId(null)}>취소</button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 truncate mr-2">
+                        <div className="truncate text-sm font-medium">{w.name}</div>
+                        <button 
+                          className="text-[10px] text-slate-400 hover:text-brand-600 shrink-0" 
+                          onClick={() => { setEditingWsId(w.id); setTempWsName(w.name); }}
+                          title="작업실명 수정"
+                        >
+                          📝
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1 shrink-0">
                       <button
-                        title="작업장 삭제"
-                        aria-label="작업장 삭제"
+                        title="작업실 삭제"
+                        aria-label="작업실 삭제"
                         className="rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-700"
                         onClick={async () => {
-                          if (!confirm(`작업장 "${w.name}" 을(를) 삭제하시겠습니까?\n해당 작업장의 모든 구역도 함께 삭제됩니다.`)) return
+                          if (!confirm(`작업실 "${w.name}" 을(를) 삭제하시겠습니까?\n해당 작업실의 모든 구역도 함께 삭제됩니다.`)) return
                           const zSnap = await getDocs(query(collection(db, 'zones'), where('workspaceId', '==', w.id)))
                           await Promise.all(zSnap.docs.map(d => deleteDoc(doc(db, 'zones', d.id))))
                           if (w.planUrl) { try { await deleteObject(ref(storage, w.planUrl)) } catch (_) {} }
@@ -1648,15 +1747,27 @@ function WorkspacesOverview({
                     )}
                   </div>
 
-                  {w.planUrl ? (
-                    <a className="text-xs text-brand-700 underline" href={w.planUrl} target="_blank">도면 보기</a>
-                  ) : (
-                    <div className="text-xs text-slate-500">도면 없음</div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    {w.planUrl ? (
+                      <button 
+                        className="text-xs text-brand-700 underline" 
+                        onClick={() => { setChangingPlanWsId(w.id); fileInputRef.current?.click(); }}
+                      >
+                        도면 변경
+                      </button>
+                    ) : (
+                      <button 
+                        className="text-xs text-brand-700 underline"
+                        onClick={() => { setChangingPlanWsId(w.id); fileInputRef.current?.click(); }}
+                      >
+                        도면 등록
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
               {(byCategory[c.id] || []).length === 0 && (
-                <div className="rounded border p-2 text-xs text-slate-500">작업장 없음</div>
+                <div className="rounded border p-2 text-xs text-slate-500">작업실 없음</div>
               )}
             </div>
           </div>
@@ -1667,7 +1778,7 @@ function WorkspacesOverview({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-lg bg-white p-4 shadow-lg">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-lg font-semibold">새 작업장 추가</h3>
+              <h3 className="text-lg font-semibold">새 작업실 추가</h3>
               <button className="rounded border px-2 py-1 text-xs" onClick={() => setShowModal(false)}>닫기</button>
             </div>
             <div className="space-y-3 text-sm">
@@ -1698,7 +1809,7 @@ function WorkspacesOverview({
                   </>
                 )}
 
-                <label className="col-span-1">작업장 명칭</label>
+                <label className="col-span-1">작업실 명칭</label>
                 <input className="col-span-2 rounded border px-2 py-1" value={modalWorkspaceName} onChange={(e) => setModalWorkspaceName(e.target.value)} />
 
                 <label className="col-span-1">도면 업로드</label>
@@ -1712,7 +1823,7 @@ function WorkspacesOverview({
                 className="rounded bg-brand-600 px-3 py-1 text-sm text-white disabled:opacity-50"
                 disabled={saving}
                 onClick={async () => {
-                  if (!modalWorkspaceName.trim()) { alert('작업장 명칭을 입력하세요'); return }
+                  if (!modalWorkspaceName.trim()) { alert('작업실 명칭을 입력하세요'); return }
                   if (!modalPlanFile) { alert('도면 파일을 업로드하세요'); return }
                   
                   setSaving(true)
@@ -1747,7 +1858,7 @@ function WorkspacesOverview({
                     setShowModal(false)
                     setModalSelectedCategoryId(''); setModalNewCategory(''); setModalWorkspaceName(''); setModalPlanFile(null)
                   } catch (e: any) {
-                    alert(e?.message || '작업장 생성에 실패했습니다.')
+                    alert(e?.message || '작업실 생성에 실패했습니다.')
                   } finally {
                     setSaving(false)
                   }
@@ -1759,6 +1870,15 @@ function WorkspacesOverview({
           </div>
         </div>
       )}
+      
+      {/* 도면 변경용 숨겨진 입력창 */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        className="hidden" 
+        accept="image/*" 
+        onChange={handlePlanChange} 
+      />
     </div>
   )
 }
@@ -1831,7 +1951,7 @@ function ZoneEditor({
   }, [activeWorkspaceId])
 
   const startNewZone = () => {
-    if (!activeWorkspaceId) return alert('상단에서 작업장을 선택하세요')
+    if (!activeWorkspaceId) return alert('상단에서 작업실을 선택하세요')
     setEditing({
       id: 'new',
       name: '',
@@ -1883,7 +2003,7 @@ function ZoneEditor({
     <div className="rounded-lg border bg-white p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-semibold">구역 편집</h2>
-        <div className="text-sm text-slate-600">상단에서 작업장을 선택하세요.</div>
+        <div className="text-sm text-slate-600">상단에서 작업실을 선택하세요.</div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

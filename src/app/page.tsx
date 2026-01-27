@@ -50,7 +50,7 @@ export default function HomePage() {
       const list: Workspace[] = []
       snap.forEach((d) => list.push({ id: d.id, ...(d.data() as any) }))
       setWorkspaces(list)
-      // 초기 선택: 현재 카테고리에 속한 첫 작업장 또는 전체 첫 작업장
+      // 초기 선택: 현재 카테고리에 속한 첫 작업실 또는 전체 첫 작업실
       if (!activeWorkspace && list.length) {
         const firstInCat = list.find((w) => w.categoryId === activeCategory)
         setActiveWorkspace(firstInCat ? firstInCat.id : list[0].id)
@@ -59,7 +59,7 @@ export default function HomePage() {
     return () => unsub()
   }, [])
 
-  // 카테고리 변경 시 해당 카테고리의 첫 작업장으로 이동
+  // 카테고리 변경 시 해당 카테고리의 첫 작업실로 이동
   useEffect(() => {
     if (!activeCategory || workspaces.length === 0) return
     const belongs = workspaces.find((w) => w.id === activeWorkspace && w.categoryId === activeCategory)
@@ -120,7 +120,7 @@ export default function HomePage() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between border-b pb-2">
-        <h1 className="text-xl md:text-2xl font-bold text-slate-900">IIC작업장</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">IIC작업실</h1>
         <Link href="/admin" className="text-xs md:text-sm font-medium text-brand-700 hover:text-brand-800 hover:underline">관리자 모드</Link>
       </div>
 
@@ -128,7 +128,7 @@ export default function HomePage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         {/* 사이드바: 모바일에서는 상단에, 데스크톱에서는 좌측에 배치 */}
         <aside className="lg:col-span-3 rounded-lg border bg-white p-3">
-            <h2 className="mb-2 text-base font-semibold">카테고리 및 작업장</h2>
+            <h2 className="mb-2 text-base font-semibold">카테고리 및 작업실</h2>
             <div className="space-y-2 max-h-[300px] overflow-y-auto lg:max-h-none">
               {(() => {
                 const base = (allowedCategoryIds && allowedCategoryIds.length ? categories.filter(c => allowedCategoryIds.includes(c.id)) : categories)
@@ -163,7 +163,7 @@ export default function HomePage() {
                             </button>
                           ))}
                         {workspaces.filter((w) => w.categoryId === c.id).length === 0 && (
-                          <div className="px-2 py-1 text-xs text-slate-500">작업장 없음</div>
+                          <div className="px-2 py-1 text-xs text-slate-500">작업실 없음</div>
                         )}
                       </div>
                     )}

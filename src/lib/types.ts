@@ -5,7 +5,7 @@ export type ZoneId = string;
 export interface Zone {
   id: ZoneId;
   floorId?: FloorId; // 과거 호환
-  workspaceId?: string; // 새 구조: 작업장 기준으로 필터
+  workspaceId?: string; // 새 구조: 작업실 기준으로 필터
   name: string; // 팀 이름 또는 구역명
   purpose?: string; // 사용 목적
   note?: string; // 비고

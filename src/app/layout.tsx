@@ -2,8 +2,8 @@ import './globals.css'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'IIC작업장',
-  description: 'IIC작업장 현황 대시보드',
+  title: 'IIC작업실',
+  description: 'IIC작업실 현황 대시보드',
 }
 
 export default function RootLayout({
