@@ -106,7 +106,7 @@ export default function AdminPage() {
             {[
               { id: 'workspaces', label: '🏢 작업실 관리', icon: '🏢' },
               { id: 'all-zones', label: '📋 작업실 사용 현황', icon: '📋' },
-              { id: 'overseas-work', label: '🌏 LAB본부 해외 작업 현황', icon: '🌏' },
+              { id: 'overseas-work', label: '🛠️ LAV본부 직접 설치 작업', icon: '🛠️' },
               { id: 'sidebar-settings', label: '⚙️ 사이드바 설정', icon: '⚙️' },
             ].map((tab) => (
               <button
@@ -165,9 +165,9 @@ export default function AdminPage() {
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">🌏</span> LAB본부 해외 작업 현황
+                  <span className="text-xl">🛠️</span> LAV본부 직접 설치 작업
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">해외 출장 계획 및 작업 현황을 관리합니다.</p>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
               </div>
               <OverseasWorkList />
             </div>
@@ -632,6 +632,7 @@ function OverseasWorkList() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
+  const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [modalOpen, setModalOpen] = useState(false)
@@ -653,10 +654,11 @@ function OverseasWorkList() {
   const filteredItems = useMemo(() => {
     return items.filter(item => {
       if (selectedBrands.length > 0 && !selectedBrands.includes(item.brand)) return false
-      const searchStr = `${item.projectName} ${item.location} ${item.manager} ${item.content} ${item.brand}`.toLowerCase()
+      if (selectedWorkTypes.length > 0 && (!item.workType || !selectedWorkTypes.includes(item.workType))) return false
+      const searchStr = `${item.workType || ''} ${item.projectName} ${item.location} ${item.manager} ${item.content} ${item.brand}`.toLowerCase()
       return searchStr.includes(searchTerm.toLowerCase())
     })
-  }, [items, selectedBrands, searchTerm])
+  }, [items, selectedBrands, selectedWorkTypes, searchTerm])
 
   const handleSave = async (data: Partial<OverseasWork>) => {
     try {
@@ -717,7 +719,7 @@ function OverseasWorkList() {
         <div className="flex flex-wrap items-center gap-4">
           <input 
             type="text" 
-            placeholder="프로젝트, 장소, 담당자 등으로 검색..." 
+            placeholder="지역, 프로젝트, 장소, 담당자 등으로 검색..." 
             className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -743,6 +745,30 @@ function OverseasWorkList() {
                   style={isSelected ? { backgroundColor: cfg.color, color: 'white' } : {}}
                 >
                   {cfg.name}
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
+            <span className="text-xs font-semibold text-slate-400 mr-1">지역:</span>
+            {['국내', '해외'].map((type) => {
+              const isSelected = selectedWorkTypes.includes(type);
+              return (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setSelectedWorkTypes(prev => 
+                      isSelected ? prev.filter(t => t !== type) : [...prev, type]
+                    )
+                  }}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all border-2 ${
+                    isSelected 
+                      ? 'bg-slate-800 border-slate-800 text-white shadow-sm' 
+                      : 'border-transparent bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
+                >
+                  {type}
                 </button>
               )
             })}
@@ -777,9 +803,10 @@ function OverseasWorkList() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
+                <th className="px-4 py-2 border-b">지역</th>
                 <th className="px-4 py-2 border-b">프로젝트명</th>
                 <th className="px-4 py-2 border-b">브랜드</th>
-                <th className="px-4 py-2 border-b">작업 장소(해외)</th>
+                <th className="px-4 py-2 border-b">작업 장소</th>
                 <th className="px-4 py-2 border-b">담당자</th>
                 <th className="px-4 py-2 border-b">작업내용</th>
                 <th className="px-4 py-2 border-b">출장 계획</th>
@@ -789,6 +816,11 @@ function OverseasWorkList() {
             <tbody className="divide-y bg-white">
               {filteredItems.map(item => (
                 <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-4 py-3 text-slate-600">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {item.workType || '국내'}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-slate-700 font-medium">{item.projectName}</td>
                   <td className="px-4 py-3">
                     <span 
@@ -812,7 +844,7 @@ function OverseasWorkList() {
                         }}
                       >
                         <div className="mb-2 text-[11px] font-bold text-slate-700 flex justify-between items-center">
-                          <span>출장 기간 선택</span>
+                          <span>기간 선택</span>
                           <span className="text-brand-600">
                             {inlineRange[0] ? format(inlineRange[0], 'MM.dd') : ''} 
                             {inlineRange[1] ? ` ~ ${format(inlineRange[1], 'MM.dd')}` : ''}
@@ -890,8 +922,8 @@ function OverseasWorkList() {
               ))}
               {filteredItems.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    등록된 해외 작업 현황이 없습니다.
+                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                    등록된 작업 현황이 없습니다.
                   </td>
                 </tr>
               )}
@@ -899,7 +931,7 @@ function OverseasWorkList() {
           </table>
         </div>
       ) : (
-        <OverseasCalendarView 
+        <DirectWorkCalendarView 
           items={filteredItems} 
           currentDate={currentDate} 
           setCurrentDate={setCurrentDate}
@@ -926,6 +958,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
     location: '',
     manager: '',
     content: '',
+    workType: '국내',
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
   })
@@ -944,21 +977,34 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">
-            {item?.id ? '해외 작업 수정' : '해외 작업 등록'}
+            {item?.id ? '작업 수정' : '작업 등록'}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         
         <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">프로젝트명</label>
-            <input 
-              type="text" 
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
-              value={formData.projectName}
-              onChange={e => setFormData({...formData, projectName: e.target.value})}
-              placeholder="예: Project Name"
-            />
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">지역</label>
+              <select 
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                value={formData.workType}
+                onChange={e => setFormData({...formData, workType: e.target.value as any})}
+              >
+                <option value="국내">국내</option>
+                <option value="해외">해외</option>
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-bold text-slate-500 mb-1">프로젝트명</label>
+              <input 
+                type="text" 
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+                value={formData.projectName}
+                onChange={e => setFormData({...formData, projectName: e.target.value})}
+                placeholder="예: Project Name"
+              />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -985,13 +1031,13 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">작업 장소(해외)</label>
+            <label className="block text-xs font-bold text-slate-500 mb-1">작업 장소</label>
             <input 
               type="text" 
               className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
               value={formData.location}
               onChange={e => setFormData({...formData, location: e.target.value})}
-              placeholder="예: Paris, France"
+              placeholder="예: 서울, Paris, etc."
             />
           </div>
           <div>
@@ -1005,7 +1051,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
           </div>
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-500">해외 출장 계획 (기간)</label>
+              <label className="text-xs font-bold text-slate-500">출장 계획</label>
               <label className="flex items-center gap-1.5 cursor-pointer">
                 <input 
                   type="checkbox" 
@@ -1036,7 +1082,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
               </div>
             )}
             {!hasPeriod && (
-              <p className="text-[11px] text-slate-400 italic">출장 기간이 설정되지 않았습니다.</p>
+              <p className="text-[11px] text-slate-400 italic">출장 계획이 설정되지 않았습니다.</p>
             )}
           </div>
         </div>
@@ -1060,7 +1106,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
   )
 }
 
-function OverseasCalendarView({ items, currentDate, setCurrentDate, onEdit }: { 
+function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onEdit }: { 
   items: OverseasWork[], 
   currentDate: Date, 
   setCurrentDate: (d: Date) => void,

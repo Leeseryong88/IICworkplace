@@ -56,6 +56,7 @@ export interface OverseasWork {
   startDate: string; // YYYY-MM-DD
   endDate: string;   // YYYY-MM-DD
   updatedAt: number;
+  workType?: '해외' | '국내';
 }
 
 
