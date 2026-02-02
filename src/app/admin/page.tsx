@@ -52,8 +52,15 @@ export default function AdminPage() {
   const [zoneModalOpen, setZoneModalOpen] = useState(false)
   
   // 공용 기간 필터 상태 (작업실 관리와 구역 편집에서 공유)
-  const [filterStart, setFilterStart] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [filterEnd, setFilterEnd] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [filterStart, setFilterStart] = useState('')
+  const [filterEnd, setFilterEnd] = useState('')
+
+  // 하이드레이션 오류 방지를 위해 마운트 후 날짜 설정
+  useEffect(() => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    setFilterStart(today)
+    setFilterEnd(today)
+  }, [])
 
   // 상단 탭 상태 관리
   const [activeTab, setActiveTab] = useState<'workspaces' | 'all-zones' | 'overseas-work' | 'sidebar-settings'>('workspaces')
@@ -210,9 +217,10 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
 
   useEffect(() => {
+    setCurrentDate(new Date())
     // 실시간 데이터 구독
     const unsubZones = onSnapshot(query(collection(db, 'zones'), orderBy('updatedAt', 'desc')), (snap) => {
       const list: Zone[] = []
@@ -409,11 +417,12 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
 
 function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZoneEditor }: { 
   zones: Zone[], 
-  currentDate: Date, 
+  currentDate: Date | null, 
   setCurrentDate: (d: Date) => void,
   workspaces: Workspace[],
   openZoneEditor: (cid: string, wid: string) => void
 }) {
+  if (!currentDate) return <div className="p-8 text-center text-slate-500">달력을 불러오는 중...</div>
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(monthStart)
   const calendarStart = startOfWeek(monthStart)
@@ -634,7 +643,7 @@ function OverseasWorkList() {
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [selectedWorkTypes, setSelectedWorkTypes] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<Partial<OverseasWork> | null>(null)
   const [inlineDateEditId, setInlineDateEditId] = useState<string | null>(null)
@@ -642,6 +651,7 @@ function OverseasWorkList() {
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
 
   useEffect(() => {
+    setCurrentDate(new Date())
     const unsub = onSnapshot(query(collection(db, 'overseas_work'), orderBy('updatedAt', 'desc')), (snap) => {
       const list: OverseasWork[] = []
       snap.forEach(d => list.push({ id: d.id, ...d.data() } as OverseasWork))
@@ -1108,10 +1118,11 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
 
 function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onEdit }: { 
   items: OverseasWork[], 
-  currentDate: Date, 
+  currentDate: Date | null, 
   setCurrentDate: (d: Date) => void,
   onEdit: (item: OverseasWork) => void
 }) {
+  if (!currentDate) return <div className="p-8 text-center text-slate-500">달력을 불러오는 중...</div>
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(monthStart)
   const calendarStart = startOfWeek(monthStart)

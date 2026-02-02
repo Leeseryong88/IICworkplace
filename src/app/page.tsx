@@ -16,12 +16,19 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<string>('')
   const [activeWorkspace, setActiveWorkspace] = useState<string>('')
   const [zones, setZones] = useState<Zone[]>([])
-  const [filterStartDate, setFilterStartDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
-  const [filterEndDate, setFilterEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'))
+  const [filterStartDate, setFilterStartDate] = useState<string>('')
+  const [filterEndDate, setFilterEndDate] = useState<string>('')
   const [allowedCategoryIds, setAllowedCategoryIds] = useState<string[] | null>(null)
   const [sidebarOrder, setSidebarOrder] = useState<string[] | null>(null)
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
   const [checkedZoneIds, setCheckedZoneIds] = useState<Set<string>>(new Set())
+
+  // 하이드레이션 오류 방지를 위해 마운트 후 날짜 설정
+  useEffect(() => {
+    const today = format(new Date(), 'yyyy-MM-dd')
+    setFilterStartDate(today)
+    setFilterEndDate(today)
+  }, [])
 
   useEffect(() => {
     const unsubCats = onSnapshot(query(collection(db, 'categories'), orderBy('name', 'asc')), (snap) => {
@@ -119,9 +126,9 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between border-b pb-2">
-        <h1 className="text-xl md:text-2xl font-bold text-slate-900">IIC작업실</h1>
-        <Link href="/admin" className="text-xs md:text-sm font-medium text-brand-700 hover:text-brand-800 hover:underline">관리자 모드</Link>
+      <div className="flex items-center justify-between border-b pb-2 gap-2">
+        <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 truncate">IIC작업실</h1>
+        <Link href="/admin" className="shrink-0 text-xs md:text-sm font-medium text-brand-700 hover:text-brand-800 hover:underline">관리자 모드</Link>
       </div>
 
       {/* 본문 레이아웃: 사이드바 + 캔버스 */}
@@ -175,11 +182,11 @@ export default function HomePage() {
 
         {/* 메인 캔버스 */}
         <div className="lg:col-span-9 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-white p-3 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-slate-700">🗓️ 사용 가능 여부 확인:</span>
-                <div className="relative">
+          <div className="rounded-lg border bg-white p-3 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">🗓️ 사용 가능 여부 확인:</span>
+                <div className="relative w-full sm:w-auto">
                   <DatePicker
                     selectsRange={true}
                     startDate={filterStartDate ? parseISO(filterStartDate) : null}
@@ -194,13 +201,13 @@ export default function HomePage() {
                     isClearable={false}
                     placeholderText="날짜 범위를 선택하세요"
                     customInput={
-                      <button className="flex items-center gap-2 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all shadow-sm min-w-[200px] justify-between">
+                      <button className="flex w-full items-center justify-between gap-2 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all shadow-sm sm:min-w-[200px]">
                         <div className="flex items-center gap-2 text-slate-700">
                           <span className="text-lg">📅</span>
                           <span className="font-medium">
                             {filterStartDate ? (
                               filterEndDate ? `${filterStartDate} ~ ${filterEndDate}` : `${filterStartDate} ~ 선택 중...`
-                            ) : '예약된 모든 공간 보기'}
+                            ) : '모든 날짜'}
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-400">▼</span>
@@ -209,10 +216,10 @@ export default function HomePage() {
                   />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 {(filterStartDate !== format(new Date(), 'yyyy-MM-dd') || filterEndDate !== format(new Date(), 'yyyy-MM-dd')) && (
                   <button 
-                    className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-brand-600"
+                    className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-brand-600 sm:flex-none"
                     onClick={() => { 
                       const today = format(new Date(), 'yyyy-MM-dd');
                       setFilterStartDate(today); 
@@ -224,13 +231,13 @@ export default function HomePage() {
                 )}
                 {(filterStartDate || filterEndDate) && (
                   <button 
-                    className="rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:text-brand-800"
+                    className="flex-1 rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:text-brand-800 sm:flex-none"
                     onClick={() => { 
                       setFilterStartDate(''); 
                       setFilterEndDate('');
                     }}
                   >
-                    ✨ 예약된 모든 공간 보기
+                    ✨ 모든 날짜
                   </button>
                 )}
               </div>
