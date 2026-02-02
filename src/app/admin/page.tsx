@@ -113,7 +113,7 @@ export default function AdminPage() {
             {[
               { id: 'workspaces', label: '🏢 작업실 관리', icon: '🏢' },
               { id: 'all-zones', label: '📋 작업실 사용 현황', icon: '📋' },
-              { id: 'overseas-work', label: '🛠️ LAV본부 직접 설치 작업', icon: '🛠️' },
+              { id: 'overseas-work', label: '🛠️ LAB본부 직접 설치 작업', icon: '🛠️' },
               { id: 'sidebar-settings', label: '⚙️ 사이드바 설정', icon: '⚙️' },
             ].map((tab) => (
               <button
@@ -172,7 +172,7 @@ export default function AdminPage() {
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">🛠️</span> LAV본부 직접 설치 작업
+                  <span className="text-xl">🛠️</span> LAB본부 직접 설치 작업
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5 ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
               </div>
