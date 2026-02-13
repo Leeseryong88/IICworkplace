@@ -645,6 +645,7 @@ function OverseasWorkList() {
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [viewingItem, setViewingItem] = useState<OverseasWork | null>(null)
   const [editingItem, setEditingItem] = useState<Partial<OverseasWork> | null>(null)
   const [inlineDateEditId, setInlineDateEditId] = useState<string | null>(null)
   const [inlineRange, setInlineRange] = useState<[Date | null, Date | null]>([null, null])
@@ -809,41 +810,67 @@ function OverseasWorkList() {
       </div>
 
       {viewMode === 'list' ? (
-        <div className="overflow-x-auto rounded border">
-          <table className="w-full text-left text-sm">
+        <div className="rounded border bg-white overflow-hidden">
+          <table className="overseas-work-table w-full text-left table-fixed">
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
-                <th className="px-4 py-2 border-b">지역</th>
-                <th className="px-4 py-2 border-b">프로젝트명</th>
-                <th className="px-4 py-2 border-b">브랜드</th>
-                <th className="px-4 py-2 border-b">작업 장소</th>
-                <th className="px-4 py-2 border-b">담당자</th>
-                <th className="px-4 py-2 border-b">작업내용</th>
-                <th className="px-4 py-2 border-b">출장 계획</th>
-                <th className="px-4 py-2 border-b text-right">관리</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[5%]">지역</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[40%]">프로젝트명</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[8%] text-center">브랜드</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[25%]">작업 장소</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[8%]">담당자</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[14%]">출장 계획</th>
               </tr>
             </thead>
-            <tbody className="divide-y bg-white">
+            <tbody className="divide-y">
               {filteredItems.map(item => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-4 py-3 text-slate-600">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
+                  <td className="px-2 py-3 text-slate-600 whitespace-nowrap">
+                    <span className={`inline-block px-1.5 py-0.5 rounded font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`} style={{ fontSize: 'inherit' }}>
                       {item.workType || '국내'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-700 font-medium">{item.projectName}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-3 py-3 text-slate-700 font-medium whitespace-nowrap">
+                    <div className="flex items-center justify-between gap-2 max-w-full">
+                      <button 
+                        onClick={() => setViewingItem(item)}
+                        className="hover:text-brand-600 hover:underline transition-colors flex items-center gap-1.5 overflow-hidden"
+                        title="상세 보기"
+                      >
+                        {item.attachments && item.attachments.length > 0 && (
+                          <span className="shrink-0 text-brand-600 font-bold">📎</span>
+                        )}
+                        <span className="truncate">{item.projectName}</span>
+                      </button>
+                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingItem(item); setModalOpen(true); }}
+                          className="rounded border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700 hover:bg-brand-100"
+                          title="수정"
+                        >
+                          수정
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); item.id && handleDelete(item.id); }}
+                          className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700 hover:bg-red-100"
+                          title="삭제"
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-3 whitespace-nowrap text-center">
                     <span 
-                      className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
-                      style={{ backgroundColor: BRAND_CONFIG[item.brand]?.color || '#327fff' }}
+                      className="inline-block px-2 py-0.5 rounded-full font-bold text-white"
+                      style={{ backgroundColor: BRAND_CONFIG[item.brand]?.color || '#327fff', fontSize: 'inherit' }}
                     >
                       {BRAND_CONFIG[item.brand]?.name || item.brand}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{item.location}</td>
-                  <td className="px-4 py-3 text-slate-600">{item.manager}</td>
-                  <td className="px-4 py-3 text-slate-500 max-w-xs truncate">{item.content}</td>
-                  <td className="px-4 py-3 text-slate-500 text-xs relative">
+                  <td className="px-3 py-3 text-slate-600 whitespace-nowrap truncate" title={item.location}>{item.location}</td>
+                  <td className="px-2 py-3 text-slate-600 whitespace-nowrap truncate">{item.manager}</td>
+                  <td className="px-2 py-3 text-slate-500 relative whitespace-nowrap overflow-visible">
                     {inlineDateEditId === item.id ? (
                       <div 
                         className="fixed z-[100] bg-white shadow-2xl border border-slate-200 rounded-xl p-3 animate-in fade-in zoom-in duration-200"
@@ -885,8 +912,8 @@ function OverseasWorkList() {
                       </div>
                     ) : (
                       item.startDate && item.endDate ? (
-                        <div className="flex items-center gap-2 group">
-                          <span>{item.startDate} ~ {item.endDate}</span>
+                        <div className="flex items-center gap-1 group inline-flex max-w-full overflow-hidden truncate">
+                          <span className="truncate text-[0.9em]">{item.startDate} ~ {item.endDate}</span>
                           <button 
                             onClick={(e) => { 
                               const rect = e.currentTarget.getBoundingClientRect();
@@ -894,9 +921,9 @@ function OverseasWorkList() {
                               setInlineDateEditId(item.id!); 
                               setInlineRange([parseISO(item.startDate), parseISO(item.endDate)]); 
                             }}
-                            className="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline transition-opacity"
+                            className="opacity-0 group-hover:opacity-100 text-brand-600 hover:underline transition-opacity shrink-0"
                           >
-                            수정
+                            📝
                           </button>
                         </div>
                       ) : (
@@ -907,26 +934,12 @@ function OverseasWorkList() {
                             setInlineDateEditId(item.id!); 
                             setInlineRange([new Date(), new Date()]); 
                           }}
-                          className="text-brand-600 hover:text-brand-700 hover:underline font-bold flex items-center gap-1"
+                          className="text-brand-600 hover:text-brand-700 hover:underline font-bold flex items-center gap-1 text-[0.9em]"
                         >
-                          📅 기간 지정하기
+                          📅 지정
                         </button>
                       )
                     )}
-                  </td>
-                  <td className="px-4 py-3 text-right space-x-1">
-                    <button 
-                      onClick={() => { setEditingItem(item); setModalOpen(true); }}
-                      className="rounded border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700 hover:bg-brand-100"
-                    >
-                      편집
-                    </button>
-                    <button 
-                      onClick={() => item.id && handleDelete(item.id)}
-                      className="rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                    >
-                      삭제
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -945,7 +958,7 @@ function OverseasWorkList() {
           items={filteredItems} 
           currentDate={currentDate} 
           setCurrentDate={setCurrentDate}
-          onEdit={(item) => { setEditingItem(item); setModalOpen(true); }}
+          onView={(item) => setViewingItem(item)}
         />
       )}
 
@@ -956,12 +969,32 @@ function OverseasWorkList() {
           onSave={handleSave} 
         />
       )}
+
+      {viewingItem && (
+        <WorkViewModal 
+          item={viewingItem} 
+          onClose={() => setViewingItem(null)} 
+          onEdit={() => { 
+            const item = viewingItem;
+            setViewingItem(null); 
+            setEditingItem(item); 
+            setModalOpen(true); 
+          }}
+          onDelete={() => {
+            if (viewingItem.id && confirm('정말 삭제하시겠습니까?')) {
+              handleDelete(viewingItem.id);
+              setViewingItem(null);
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
 
 function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWork> | null, onClose: () => void, onSave: (data: Partial<OverseasWork>) => void }) {
   const [hasPeriod, setHasPeriod] = useState(!!(item?.startDate && item?.endDate))
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState<Partial<OverseasWork>>(item || {
     projectName: '',
     brand: 'GM',
@@ -971,9 +1004,11 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
     workType: '국내',
     startDate: format(new Date(), 'yyyy-MM-dd'),
     endDate: format(new Date(), 'yyyy-MM-dd'),
+    attachments: [],
   })
 
   const handleSubmit = () => {
+    if (uploading) return
     const dataToSave = { ...formData }
     if (!hasPeriod) {
       dataToSave.startDate = ''
@@ -982,9 +1017,41 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
     onSave(dataToSave)
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    const newAttachments = [...(formData.attachments || [])]
+
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i]
+        const timestamp = Date.now()
+        const storageRef = ref(storage, `overseas_work_attachments/${timestamp}_${file.name}`)
+        const snapshot = await uploadBytes(storageRef, file)
+        const url = await getDownloadURL(snapshot.ref)
+        newAttachments.push({ name: file.name, url })
+      }
+      setFormData({ ...formData, attachments: newAttachments })
+    } catch (error) {
+      console.error('File upload error:', error)
+      alert('파일 업로드 중 오류가 발생했습니다.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    const newAttachments = [...(formData.attachments || [])]
+    newAttachments.splice(index, 1)
+    setFormData({ ...formData, attachments: newAttachments })
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200">
+      <div className="w-full max-w-5xl rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-bold text-slate-900">
             {item?.id ? '작업 수정' : '작업 등록'}
@@ -992,123 +1059,154 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         
-        <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">지역</label>
-              <select 
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={formData.workType}
-                onChange={e => setFormData({...formData, workType: e.target.value as any})}
-              >
-                <option value="국내">국내</option>
-                <option value="해외">해외</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-bold text-slate-500 mb-1">프로젝트명</label>
-              <input 
-                type="text" 
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
-                value={formData.projectName}
-                onChange={e => setFormData({...formData, projectName: e.target.value})}
-                placeholder="예: Project Name"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">브랜드</label>
-              <select 
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-                value={formData.brand}
-                onChange={e => setFormData({...formData, brand: e.target.value})}
-              >
-                {Object.keys(BRAND_CONFIG).filter(key => key !== 'LAB').map(key => (
-                  <option key={key} value={key}>{BRAND_CONFIG[key].name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 mb-1">담당자</label>
-              <input 
-                type="text" 
-                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
-                value={formData.manager}
-                onChange={e => setFormData({...formData, manager: e.target.value})}
-                placeholder="담당자 이름"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">작업 장소</label>
-            <input 
-              type="text" 
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
-              value={formData.location}
-              onChange={e => setFormData({...formData, location: e.target.value})}
-              placeholder="예: 서울, Paris, etc."
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 mb-1">작업내용</label>
-            <textarea 
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 h-24" 
-              value={formData.content}
-              onChange={e => setFormData({...formData, content: e.target.value})}
-              placeholder="작업 내용 상세 기술"
-            />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-500">출장 계획</label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 왼쪽 컬럼: 기본 정보 */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">지역</label>
+                <select 
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={formData.workType}
+                  onChange={e => setFormData({...formData, workType: e.target.value as any})}
+                >
+                  <option value="국내">국내</option>
+                  <option value="해외">해외</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-bold text-slate-500 mb-1">프로젝트명</label>
                 <input 
-                  type="checkbox" 
-                  checked={hasPeriod} 
-                  onChange={e => setHasPeriod(e.target.checked)}
-                  className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                />
-                <span className="text-xs font-medium text-slate-600">기간 입력</span>
-              </label>
-            </div>
-            {hasPeriod && (
-              <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                <DatePicker
-                  selected={formData.startDate ? parseISO(formData.startDate) : new Date()}
-                  onChange={(date) => setFormData({ ...formData, startDate: format(date || new Date(), 'yyyy-MM-dd') })}
-                  dateFormat="yyyy-MM-dd"
-                  className="w-full rounded-lg border px-3 py-2 text-sm"
-                  locale="ko"
-                />
-                <span className="text-slate-400">~</span>
-                <DatePicker
-                  selected={formData.endDate ? parseISO(formData.endDate) : new Date()}
-                  onChange={(date) => setFormData({ ...formData, endDate: format(date || new Date(), 'yyyy-MM-dd') })}
-                  dateFormat="yyyy-MM-dd"
-                  className="w-full rounded-lg border px-3 py-2 text-sm"
-                  locale="ko"
+                  type="text" 
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+                  value={formData.projectName}
+                  onChange={e => setFormData({...formData, projectName: e.target.value})}
+                  placeholder="예: Project Name"
                 />
               </div>
-            )}
-            {!hasPeriod && (
-              <p className="text-[11px] text-slate-400 italic">출장 계획이 설정되지 않았습니다.</p>
-            )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">브랜드</label>
+                <select 
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={formData.brand}
+                  onChange={e => setFormData({...formData, brand: e.target.value})}
+                >
+                  {Object.keys(BRAND_CONFIG).filter(key => key !== 'LAB').map(key => (
+                    <option key={key} value={key}>{BRAND_CONFIG[key].name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">담당자</label>
+                <input 
+                  type="text" 
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+                  value={formData.manager}
+                  onChange={e => setFormData({...formData, manager: e.target.value})}
+                  placeholder="담당자 이름"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-1">작업 장소</label>
+              <input 
+                type="text" 
+                className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" 
+                value={formData.location}
+                onChange={e => setFormData({...formData, location: e.target.value})}
+                placeholder="예: 서울, Paris, etc."
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-bold text-slate-500">출장 계획</label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={hasPeriod} 
+                    onChange={e => setHasPeriod(e.target.checked)}
+                    className="rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                  />
+                  <span className="text-xs font-medium text-slate-600">기간 입력</span>
+                </label>
+              </div>
+              {hasPeriod && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <DatePicker
+                    selected={formData.startDate ? parseISO(formData.startDate) : new Date()}
+                    onChange={(date) => setFormData({ ...formData, startDate: format(date || new Date(), 'yyyy-MM-dd') })}
+                    dateFormat="yyyy-MM-dd"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    locale="ko"
+                  />
+                  <span className="text-slate-400">~</span>
+                  <DatePicker
+                    selected={formData.endDate ? parseISO(formData.endDate) : new Date()}
+                    onChange={(date) => setFormData({ ...formData, endDate: format(date || new Date(), 'yyyy-MM-dd') })}
+                    dateFormat="yyyy-MM-dd"
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    locale="ko"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-500 mb-2">첨부 자료 (도면, 랜더링 등)</label>
+              <div className="flex flex-col gap-2">
+                <label className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-slate-200 py-4 text-sm text-slate-500 hover:border-brand-300 hover:text-brand-600 transition-colors">
+                  <span className="text-lg">📁</span>
+                  <span>{uploading ? '업로드 중...' : '파일 선택 (이미지, PDF 등)'}</span>
+                  <input type="file" multiple className="hidden" onChange={handleFileUpload} disabled={uploading} />
+                </label>
+                
+                {formData.attachments && formData.attachments.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    {formData.attachments.map((file, idx) => (
+                      <div key={idx} className="flex items-center justify-between rounded-md bg-slate-50 px-3 py-2 text-xs">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <span className="shrink-0 text-slate-400">📄</span>
+                          <span className="truncate text-slate-600" title={file.name}>{file.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <a href={file.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">보기</a>
+                          <button onClick={() => removeAttachment(idx)} className="text-red-400 hover:text-red-600">✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 오른쪽 컬럼: 작업내용 (문서 작성용으로 크게) */}
+          <div className="flex flex-col h-full">
+            <label className="block text-xs font-bold text-slate-500 mb-1">작업내용 상세 기술</label>
+            <textarea 
+              className="w-full flex-grow rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 min-h-[400px] lg:min-h-0" 
+              value={formData.content}
+              onChange={e => setFormData({...formData, content: e.target.value})}
+              placeholder="문서 작성하듯 상세 내용을 입력하세요."
+            />
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-8 flex justify-end gap-3 border-t pt-4">
           <button 
             onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className="rounded-lg bg-slate-100 px-6 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors"
           >
             취소
           </button>
           <button 
             onClick={handleSubmit}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 shadow-sm transition-all active:scale-95"
+            disabled={uploading}
+            className={`rounded-lg px-8 py-2.5 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${uploading ? 'bg-slate-400' : 'bg-brand-600 hover:bg-brand-700'}`}
           >
-            저장하기
+            {uploading ? '파일 업로드 중...' : (item?.id ? '수정 완료' : '작업 등록')}
           </button>
         </div>
       </div>
@@ -1116,11 +1214,117 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
   )
 }
 
-function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onEdit }: { 
+function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork, onClose: () => void, onEdit: () => void, onDelete: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="mb-6 flex items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-3">
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+              {item.workType || '국내'}
+            </span>
+            <h3 className="text-xl font-bold text-slate-900">{item.projectName}</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onEdit}
+              className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-700 hover:bg-brand-100 transition-colors"
+            >
+              수정
+            </button>
+            <button 
+              onClick={onDelete}
+              className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-bold text-red-700 hover:bg-red-100 transition-colors"
+            >
+              삭제
+            </button>
+            <button onClick={onClose} className="ml-2 text-slate-400 hover:text-slate-600 text-xl">✕</button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-1 space-y-6">
+            <div className="space-y-4 rounded-lg bg-slate-50 p-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">브랜드</label>
+                <div className="flex items-center gap-2">
+                  <span 
+                    className="h-3 w-3 rounded-full" 
+                    style={{ backgroundColor: BRAND_CONFIG[item.brand]?.color || '#327fff' }} 
+                  />
+                  <span className="font-semibold text-slate-700">{BRAND_CONFIG[item.brand]?.name || item.brand}</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">담당자</label>
+                <p className="font-semibold text-slate-700">{item.manager}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">작업 장소</label>
+                <p className="font-semibold text-slate-700">{item.location}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">출장 일정</label>
+                <p className="font-semibold text-slate-700">
+                  {item.startDate && item.endDate ? `${item.startDate} ~ ${item.endDate}` : '미정'}
+                </p>
+              </div>
+            </div>
+
+            {item.attachments && item.attachments.length > 0 && (
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+                  <span>📎</span> 첨부 자료 ({item.attachments.length})
+                </label>
+                <div className="space-y-2">
+                  {item.attachments.map((file, idx) => (
+                    <a 
+                      key={idx} 
+                      href={file.url} 
+                      target="_blank" 
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm hover:bg-slate-50 hover:border-brand-300 transition-all group"
+                    >
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <span className="shrink-0 text-slate-400 group-hover:text-brand-500">📄</span>
+                        <span className="truncate text-slate-600 font-medium group-hover:text-brand-600">{file.name}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-brand-600 shrink-0">보기</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <span>📝</span> 작업 내용
+            </label>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 min-h-[400px] whitespace-pre-wrap text-sm leading-relaxed text-slate-700 shadow-sm">
+              {item.content || '등록된 내용이 없습니다.'}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t pt-4 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
+          >
+            닫기
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onView }: { 
   items: OverseasWork[], 
   currentDate: Date | null, 
   setCurrentDate: (d: Date) => void,
-  onEdit: (item: OverseasWork) => void
+  onView: (item: OverseasWork) => void
 }) {
   if (!currentDate) return <div className="p-8 text-center text-slate-500">달력을 불러오는 중...</div>
   const monthStart = startOfMonth(currentDate)
@@ -1249,7 +1453,7 @@ function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onEdit }: 
                             className="pointer-events-auto cursor-pointer text-[10px] flex items-center relative h-5 mx-0.5"
                             style={{ gridColumn: `${colStart} / span ${colSpan}` }}
                             title={`${item.projectName} | ${item.manager} (${item.startDate} ~ ${item.endDate})`}
-                            onClick={() => onEdit(item)}
+                            onClick={() => onView(item)}
                           >
                             <div className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 opacity-60" style={{ backgroundColor: color }} />
                             

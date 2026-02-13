@@ -48,4 +48,9 @@ html, body, :root {
   border-radius: 0.3rem !important;
 }
 
+/* LAB본부 직접 설치 작업 테이블 - 반응형 글자 크기 (화면 크기에 따라 9px~14px) */
+.overseas-work-table {
+  font-size: clamp(0.5625rem, 1vw + 0.4rem, 0.875rem);
+}
+
 

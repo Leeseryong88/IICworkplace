@@ -57,6 +57,7 @@ export interface OverseasWork {
   endDate: string;   // YYYY-MM-DD
   updatedAt: number;
   workType?: '해외' | '국내';
+  attachments?: Array<{ name: string; url: string }>;
 }
 
 
