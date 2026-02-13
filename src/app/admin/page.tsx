@@ -218,6 +218,7 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [currentDate, setCurrentDate] = useState<Date | null>(null)
+  const [viewingZone, setViewingZone] = useState<Zone | null>(null)
 
   useEffect(() => {
     setCurrentDate(new Date())
@@ -333,17 +334,17 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
       </div>
 
       {viewMode === 'list' ? (
-        <div className="overflow-x-auto rounded border">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600 font-medium">
+        <div className="rounded border bg-white overflow-hidden">
+          <table className="w-full text-left table-fixed">
+            <thead className="bg-slate-50 text-slate-600 font-medium text-[clamp(11px,1vw+2px,13px)]">
               <tr>
-                <th className="px-4 py-2 border-b">프로젝트명</th>
-                <th className="px-4 py-2 border-b">브랜드</th>
-                <th className="px-4 py-2 border-b">카테고리</th>
-                <th className="px-4 py-2 border-b">작업실</th>
-                <th className="px-4 py-2 border-b">파트/팀</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[25%]">프로젝트명</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[8%] text-center">브랜드</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[12%]">카테고리</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[10%]">작업실</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[20%]">파트/팀</th>
                 <th 
-                  className="px-4 py-2 border-b cursor-pointer hover:bg-slate-100 transition-colors group"
+                  className="px-3 py-2 border-b cursor-pointer hover:bg-slate-100 transition-colors group w-[15%]"
                   onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 >
                   <div className="flex items-center gap-1">
@@ -352,49 +353,56 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
                     <span className={`text-[10px] transition-colors ${sortOrder === 'desc' ? 'text-brand-600' : 'text-slate-300 group-hover:text-slate-500'}`}>▼</span>
                   </div>
                 </th>
-                <th className="px-4 py-2 border-b">담당자</th>
-                <th className="px-4 py-2 border-b text-right">작업</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[10%]">담당자</th>
               </tr>
             </thead>
-            <tbody className="divide-y bg-white">
+            <tbody className="divide-y text-[clamp(11px,1vw+2px,13px)]">
               {filteredZones.map(z => {
                 const ws = workspaces.find(w => w.id === z.workspaceId)
                 const cat = categories.find(c => c.id === ws?.categoryId)
                 return (
-                  <tr key={z.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-slate-700 font-medium">{z.project || '-'}</td>
-                    <td className="px-4 py-3">
+                  <tr key={z.id} className="hover:bg-slate-50 transition-colors group">
+                    <td className="px-3 py-3 text-slate-700 font-medium whitespace-nowrap">
+                      <div className="flex items-center justify-between gap-2 max-w-full">
+                        <button 
+                          onClick={() => setViewingZone(z)}
+                          className="hover:text-brand-600 hover:underline transition-colors truncate"
+                          title="상세 보기"
+                        >
+                          {z.project || z.name || '-'}
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); ws && openZoneEditor(ws.categoryId, ws.id) }}
+                          className="opacity-0 group-hover:opacity-100 rounded border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700 hover:bg-brand-100 transition-all shrink-0"
+                        >
+                          편집
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-2 py-3 whitespace-nowrap text-center">
                       <span 
-                        className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white"
-                        style={{ backgroundColor: z.color || '#327fff' }}
+                        className="inline-block px-2 py-0.5 rounded-full font-bold text-white whitespace-nowrap"
+                        style={{ backgroundColor: z.color || '#327fff', fontSize: 'inherit' }}
                       >
                         {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{cat?.name || '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">{ws?.name || '-'}</td>
-                    <td className="px-4 py-3 flex items-center gap-2">
-                      <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: z.color || '#327fff' }} />
-                      <span className="font-medium">{z.team || z.name}</span>
+                    <td className="px-3 py-3 text-slate-600 whitespace-nowrap truncate">{cat?.name || '-'}</td>
+                    <td className="px-3 py-3 text-slate-600 whitespace-nowrap truncate">{ws?.name || '-'}</td>
+                    <td className="px-3 py-3 flex items-center gap-2 whitespace-nowrap truncate">
+                      <span className="shrink-0 inline-block h-3 w-3 rounded-full" style={{ backgroundColor: z.color || '#327fff' }} />
+                      <span className="font-medium truncate">{z.team || z.name}</span>
                     </td>
-                    <td className="px-4 py-3 text-slate-500">
+                    <td className="px-3 py-3 text-slate-500 whitespace-nowrap truncate">
                       {z.startDate || '미정'} ~ {z.endDate || '미정'}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{z.manager || '-'}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button 
-                        onClick={() => ws && openZoneEditor(ws.categoryId, ws.id)}
-                        className="rounded border border-brand-200 bg-brand-50 px-2 py-1 text-xs text-brand-700 hover:bg-brand-100"
-                      >
-                        편집
-                      </button>
-                    </td>
+                    <td className="px-3 py-3 text-slate-600 whitespace-nowrap truncate">{z.manager || '-'}</td>
                   </tr>
                 )
               })}
               {filteredZones.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
                     {searchTerm ? '검색 결과가 없습니다.' : '등록된 구역이 없습니다.'}
                   </td>
                 </tr>
@@ -408,19 +416,33 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
           currentDate={currentDate} 
           setCurrentDate={setCurrentDate}
           workspaces={workspaces}
-          openZoneEditor={openZoneEditor}
+          onView={(z) => setViewingZone(z)}
+        />
+      )}
+
+      {viewingZone && (
+        <ZoneViewModal 
+          zone={viewingZone} 
+          onClose={() => setViewingZone(null)} 
+          onEdit={() => {
+            const ws = workspaces.find(w => w.id === viewingZone.workspaceId)
+            if (ws) {
+              setViewingZone(null)
+              openZoneEditor(ws.categoryId, ws.id)
+            }
+          }}
         />
       )}
     </div>
   )
 }
 
-function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZoneEditor }: { 
+function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView }: { 
   zones: Zone[], 
   currentDate: Date | null, 
   setCurrentDate: (d: Date) => void,
   workspaces: Workspace[],
-  openZoneEditor: (cid: string, wid: string) => void
+  onView: (z: Zone) => void
 }) {
   if (!currentDate) return <div className="p-8 text-center text-slate-500">달력을 불러오는 중...</div>
   const monthStart = startOfMonth(currentDate)
@@ -559,10 +581,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, openZone
                               gridColumn: `${colStart} / span ${colSpan}`,
                             }}
                             title={`${z.project || '프로젝트'} | ${z.team || z.name} (${z.startDate} ~ ${z.endDate})`}
-                            onClick={() => {
-                              const ws = workspaces.find(w => w.id === z.workspaceId)
-                              ws && openZoneEditor(ws.categoryId, ws.id)
-                            }}
+                            onClick={() => onView(z)}
                           >
                             {/* 연결 실 (나머지 일) */}
                             <div 
@@ -1207,6 +1226,83 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
             className={`rounded-lg px-8 py-2.5 text-sm font-bold text-white shadow-lg transition-all active:scale-95 ${uploading ? 'bg-slate-400' : 'bg-brand-600 hover:bg-brand-700'}`}
           >
             {uploading ? '파일 업로드 중...' : (item?.id ? '수정 완료' : '작업 등록')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ZoneViewModal({ zone, onClose, onEdit }: { zone: Zone, onClose: () => void, onEdit: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+        <div className="mb-6 flex items-center justify-between border-b pb-4">
+          <div className="flex items-center gap-3">
+            <span 
+              className="h-4 w-4 rounded-full" 
+              style={{ backgroundColor: zone.color || '#327fff' }} 
+            />
+            <h3 className="text-xl font-bold text-slate-900">{zone.project || zone.name || '작업 상세'}</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={onEdit}
+              className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-700 hover:bg-brand-100 transition-colors"
+            >
+              편집
+            </button>
+            <button onClick={onClose} className="ml-2 text-slate-400 hover:text-slate-600 text-xl">✕</button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-slate-50 p-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">브랜드</label>
+                <p className="font-semibold text-slate-700">{BRAND_CONFIG[zone.brand || '']?.name || zone.brand || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">담당자</label>
+                <p className="font-semibold text-slate-700">{zone.manager || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">파트/팀</label>
+                <p className="font-semibold text-slate-700">{zone.team || zone.name || '-'}</p>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-400 mb-1">사용 기간</label>
+                <p className="font-semibold text-slate-700">
+                  {zone.startDate && zone.endDate ? `${zone.startDate} ~ ${zone.endDate}` : '미정'}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">사용 목적</label>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                {zone.purpose || '등록된 목적이 없습니다.'}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-2">비고 (참고 사항)</label>
+              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 min-h-[150px] whitespace-pre-wrap">
+                {zone.note || '등록된 비고 사항이 없습니다.'}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t pt-4 flex justify-end">
+          <button 
+            onClick={onClose}
+            className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
+          >
+            닫기
           </button>
         </div>
       </div>
