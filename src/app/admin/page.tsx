@@ -669,6 +669,7 @@ function OverseasWorkList() {
   const [inlineDateEditId, setInlineDateEditId] = useState<string | null>(null)
   const [inlineRange, setInlineRange] = useState<[Date | null, Date | null]>([null, null])
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
+  const [showFinished, setShowFinished] = useState(false)
 
   useEffect(() => {
     setCurrentDate(new Date())
@@ -682,13 +683,27 @@ function OverseasWorkList() {
   }, [])
 
   const filteredItems = useMemo(() => {
-    return items.filter(item => {
+    const filtered = items.filter(item => {
+      // 종료 여부 필터링
+      if (showFinished) {
+        if (!item.isFinished) return false
+      } else {
+        if (item.isFinished) return false
+      }
+
       if (selectedBrands.length > 0 && !selectedBrands.includes(item.brand)) return false
       if (selectedWorkTypes.length > 0 && (!item.workType || !selectedWorkTypes.includes(item.workType))) return false
       const searchStr = `${item.workType || ''} ${item.projectName} ${item.location} ${item.manager} ${item.content} ${item.brand}`.toLowerCase()
       return searchStr.includes(searchTerm.toLowerCase())
     })
-  }, [items, selectedBrands, selectedWorkTypes, searchTerm])
+
+    // 출장계획 시작일(startDate) 기준 오름차순 정렬 (미정인 경우 뒤로)
+    return [...filtered].sort((a, b) => {
+      const dateA = a.startDate || '9999-12-31'
+      const dateB = b.startDate || '9999-12-31'
+      return dateA.localeCompare(dateB)
+    })
+  }, [items, selectedBrands, selectedWorkTypes, searchTerm, showFinished])
 
   const handleSave = async (data: Partial<OverseasWork>) => {
     try {
@@ -741,19 +756,56 @@ function OverseasWorkList() {
     }
   }
 
+  const handleStatusToggle = async (id: string, currentStatus?: '예정' | '확정') => {
+    const nextStatus = currentStatus === '확정' ? '예정' : '확정'
+    try {
+      await updateDoc(doc(db, 'overseas_work', id), {
+        status: nextStatus,
+        updatedAt: Date.now()
+      })
+    } catch (e) {
+      console.error(e)
+      alert('상태 변경 중 오류가 발생했습니다.')
+    }
+  }
+
+  const handleToggleFinish = async (id: string, currentFinished?: boolean) => {
+    const nextFinished = !currentFinished
+    const message = nextFinished ? '작업이 종료되었습니까?' : '작업 종료를 취소하시겠습니까?'
+    if (!confirm(message)) return
+
+    try {
+      await updateDoc(doc(db, 'overseas_work', id), {
+        isFinished: nextFinished,
+        updatedAt: Date.now()
+      })
+    } catch (e) {
+      console.error(e)
+      alert('처리 중 오류가 발생했습니다.')
+    }
+  }
+
   if (loading) return <div className="p-8 text-center text-slate-500">불러오는 중...</div>
 
   return (
     <div className="p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
-          <input 
-            type="text" 
-            placeholder="지역, 프로젝트, 장소, 담당자 등으로 검색..." 
-            className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            {showFinished && (
+              <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-600 animate-pulse">
+                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                종료된 기록 열람 중
+              </span>
+            )}
+            <input 
+              type="text" 
+              placeholder="지역, 프로젝트, 장소, 담당자 등으로 검색..." 
+              className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           
           <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
             <span className="text-xs font-semibold text-slate-400 mr-1">브랜드:</span>
@@ -805,6 +857,17 @@ function OverseasWorkList() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setShowFinished(!showFinished)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
+              showFinished 
+                ? 'bg-slate-800 text-white border-slate-800' 
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {showFinished ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
+          </button>
+
           <div className="flex items-center rounded-lg border bg-slate-50 p-1">
             <button 
               onClick={() => setViewMode('list')}
@@ -834,11 +897,13 @@ function OverseasWorkList() {
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
                 <th className="px-2 py-2 border-b whitespace-nowrap w-[5%]">지역</th>
-                <th className="px-3 py-2 border-b whitespace-nowrap w-[40%]">프로젝트명</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[6%] text-center">상태</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[30%]">프로젝트명</th>
                 <th className="px-2 py-2 border-b whitespace-nowrap w-[8%] text-center">브랜드</th>
-                <th className="px-3 py-2 border-b whitespace-nowrap w-[25%]">작업 장소</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[20%]">작업 장소</th>
                 <th className="px-2 py-2 border-b whitespace-nowrap w-[8%]">담당자</th>
-                <th className="px-2 py-2 border-b whitespace-nowrap w-[14%]">출장 계획</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[15%]">출장 계획</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[8%] text-center">작업종료</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -848,6 +913,18 @@ function OverseasWorkList() {
                     <span className={`inline-block px-1.5 py-0.5 rounded font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`} style={{ fontSize: 'inherit' }}>
                       {item.workType || '국내'}
                     </span>
+                  </td>
+                  <td className="px-2 py-3 text-center whitespace-nowrap">
+                    <button
+                      onClick={() => handleStatusToggle(item.id, item.status)}
+                      className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                        item.status === '확정' 
+                          ? 'bg-green-100 text-green-700 border border-green-200' 
+                          : 'bg-slate-100 text-slate-500 border border-slate-200'
+                      } hover:scale-105 active:scale-95`}
+                    >
+                      {item.status || '예정'}
+                    </button>
                   </td>
                   <td className="px-3 py-3 text-slate-700 font-medium whitespace-nowrap">
                     <div className="flex items-center justify-between gap-2 max-w-full">
@@ -959,6 +1036,18 @@ function OverseasWorkList() {
                         </button>
                       )
                     )}
+                  </td>
+                  <td className="px-2 py-3 text-center whitespace-nowrap">
+                    <button
+                      onClick={() => handleToggleFinish(item.id, item.isFinished)}
+                      className={`inline-block px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                        item.isFinished 
+                          ? 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100' 
+                          : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                      }`}
+                    >
+                      {item.isFinished ? '복구하기' : '작업종료'}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1081,16 +1170,27 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* 왼쪽 컬럼: 기본 정보 */}
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-500 mb-1">지역</label>
                 <select 
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full rounded-lg border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                   value={formData.workType}
                   onChange={e => setFormData({...formData, workType: e.target.value as any})}
                 >
                   <option value="국내">국내</option>
                   <option value="해외">해외</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-1">상태</label>
+                <select 
+                  className="w-full rounded-lg border px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  value={formData.status || '예정'}
+                  onChange={e => setFormData({...formData, status: e.target.value as any})}
+                >
+                  <option value="예정">예정</option>
+                  <option value="확정">확정</option>
                 </select>
               </div>
               <div className="col-span-2">
@@ -1318,6 +1418,9 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
           <div className="flex items-center gap-3">
             <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
               {item.workType || '국내'}
+            </span>
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+              {item.status || '예정'}
             </span>
             <h3 className="text-xl font-bold text-slate-900">{item.projectName}</h3>
           </div>

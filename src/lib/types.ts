@@ -58,6 +58,8 @@ export interface OverseasWork {
   updatedAt: number;
   workType?: '해외' | '국내';
   attachments?: Array<{ name: string; url: string }>;
+  status?: '예정' | '확정';
+  isFinished?: boolean;
 }
 
 
