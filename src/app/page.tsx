@@ -88,7 +88,10 @@ export default function HomePage() {
   }, [activeWorkspace])
 
   const filteredZones = useMemo(() => {
-    if (!filterStartDate && !filterEndDate) return zones
+    if (!filterStartDate && !filterEndDate) {
+      const todayStr = format(new Date(), 'yyyy-MM-dd')
+      return zones.filter(z => !z.endDate || z.endDate >= todayStr)
+    }
     return zones.filter((z) => {
       // 기간이 설정되지 않은 구역은 제외할지 포함할지 결정 필요. 
       // 여기서는 기간이 있는 구역만 필터링 대상이 된다고 가정.
