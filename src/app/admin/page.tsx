@@ -63,7 +63,7 @@ export default function AdminPage() {
   }, [])
 
   // 상단 탭 상태 관리
-  const [activeTab, setActiveTab] = useState<'workspaces' | 'all-zones' | 'overseas-work' | 'sidebar-settings'>('workspaces')
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'workspaces' | 'all-zones' | 'overseas-work' | 'sidebar-settings'>('dashboard')
 
   if (!loading && !user) {
     return <EmailPasswordLogin />
@@ -111,6 +111,7 @@ export default function AdminPage() {
           {/* 상단 탭 (탑바) */}
           <nav className="flex space-x-1 sm:space-x-8 -mb-px">
             {[
+              { id: 'dashboard', label: '📊 대시보드', icon: '📊' },
               { id: 'workspaces', label: '🏢 작업실 관리', icon: '🏢' },
               { id: 'all-zones', label: '📋 작업실 사용 현황', icon: '📋' },
               { id: 'overseas-work', label: '🛠️ LAB본부 직접 설치 작업', icon: '🛠️' },
@@ -135,6 +136,18 @@ export default function AdminPage() {
       {/* 메인 컨텐츠 영역 */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[calc(100vh-200px)]">
+          {activeTab === 'dashboard' && (
+            <div className="animate-in fade-in duration-300">
+              <div className="bg-slate-50 px-6 py-4 border-b">
+                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                  <span className="text-xl">📊</span> 대시보드
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업과 일정을 한눈에 파악할 수 있는 종합 대시보드입니다.</p>
+              </div>
+              <DashboardView />
+            </div>
+          )}
+
           {activeTab === 'workspaces' && (
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
@@ -423,6 +436,8 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
       {viewingZone && (
         <ZoneViewModal 
           zone={viewingZone} 
+          workspace={workspaces.find(w => w.id === viewingZone.workspaceId)}
+          category={categories.find(c => c.id === workspaces.find(w => w.id === viewingZone.workspaceId)?.categoryId)}
           onClose={() => setViewingZone(null)} 
           onEdit={() => {
             const ws = workspaces.find(w => w.id === viewingZone.workspaceId)
@@ -1333,10 +1348,13 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
   )
 }
 
-function ZoneViewModal({ zone, onClose, onEdit }: { zone: Zone, onClose: () => void, onEdit: () => void }) {
+function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Zone, workspace?: Workspace, category?: Category, onClose: () => void, onEdit: () => void }) {
+  const [imgNatural, setImgNatural] = useState({ w: 1000, h: 1000 })
+  const planUrl = workspace?.planUrl
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
+      <div className="w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl animate-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
         <div className="mb-6 flex items-center justify-between border-b pb-4">
           <div className="flex items-center gap-3">
             <span 
@@ -1389,11 +1407,68 @@ function ZoneViewModal({ zone, onClose, onEdit }: { zone: Zone, onClose: () => v
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">비고 (참고 사항)</label>
-              <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700 min-h-[150px] whitespace-pre-wrap">
-                {zone.note || '등록된 비고 사항이 없습니다.'}
+              <label className="text-sm font-bold text-slate-700 mb-2 flex items-center justify-between">
+                <span>도면 위치</span>
+                {category && workspace && (
+                  <span className="text-xs font-normal text-slate-500">
+                    {category.name} &gt; {workspace.name}
+                  </span>
+                )}
+              </label>
+              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-50">
+                {planUrl ? (
+                  <>
+                    <img
+                      src={planUrl}
+                      alt="floor plan"
+                      className="h-full w-full object-contain"
+                      onLoad={(e) => {
+                        const img = e.currentTarget as HTMLImageElement
+                        setImgNatural({ w: img.naturalWidth, h: img.naturalHeight })
+                      }}
+                    />
+                    <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${imgNatural.w} ${imgNatural.h}`} preserveAspectRatio="xMidYMid meet">
+                      {zone.rect ? (
+                        <g>
+                          <rect x={zone.rect.x * imgNatural.w} y={zone.rect.y * imgNatural.h} width={zone.rect.width * imgNatural.w} height={zone.rect.height * imgNatural.h} fill={zone.color || '#327fff'} fillOpacity={0.3} stroke={zone.color || '#327fff'} strokeWidth={3} rx={4} ry={4} />
+                          <text x={(zone.rect.x + zone.rect.width / 2) * imgNatural.w} y={(zone.rect.y + zone.rect.height / 2) * imgNatural.h} textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight="bold" fill="#0f172a" className="pointer-events-none select-none drop-shadow-md">
+                            {zone.project || zone.name || '-'}
+                          </text>
+                        </g>
+                      ) : (
+                        <g>
+                          <polygon
+                            points={zone.points.map((p) => `${p.x * imgNatural.w},${p.y * imgNatural.h}`).join(' ')}
+                            fill={zone.color || '#327fff'}
+                            fillOpacity={0.3}
+                            stroke={zone.color || '#327fff'}
+                            strokeWidth={3}
+                          />
+                          {zone.points.length > 0 && (
+                            <text 
+                              x={zone.points.reduce((sum, p) => sum + p.x, 0) / zone.points.length * imgNatural.w} 
+                              y={zone.points.reduce((sum, p) => sum + p.y, 0) / zone.points.length * imgNatural.h} 
+                              textAnchor="middle" dominantBaseline="middle" fontSize={16} fontWeight="bold" fill="#0f172a" className="pointer-events-none select-none drop-shadow-md"
+                            >
+                              {zone.project || zone.name || '-'}
+                            </text>
+                          )}
+                        </g>
+                      )}
+                    </svg>
+                  </>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-slate-400 text-sm">도면이 없습니다.</div>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <label className="block text-sm font-bold text-slate-700 mb-2">비고 (참고 사항)</label>
+          <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 min-h-[80px] whitespace-pre-wrap">
+            {zone.note || '등록된 비고 사항이 없습니다.'}
           </div>
         </div>
 
@@ -1696,6 +1771,516 @@ function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onView }: 
           })}
         </div>
       </div>
+    </div>
+  )
+}
+
+function DashboardView() {
+  const [zones, setZones] = useState<Zone[]>([])
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [overseasWorks, setOverseasWorks] = useState<OverseasWork[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedView, setSelectedView] = useState<'activeZones' | 'activeWorks' | 'totalOngoing' | 'upcoming' | null>(null)
+  const [viewingZone, setViewingZone] = useState<Zone | null>(null)
+  const [viewingWork, setViewingWork] = useState<OverseasWork | null>(null)
+
+  useEffect(() => {
+    // 1. 구역 현황 가져오기
+    const unsubZones = onSnapshot(query(collection(db, 'zones')), (snap) => {
+      const list: Zone[] = []
+      snap.forEach(d => list.push({ id: d.id, ...d.data() } as Zone))
+      setZones(list)
+    })
+    
+    // 2. 작업실 목록 가져오기
+    const unsubWs = onSnapshot(collection(db, 'workspaces'), (snap) => {
+      const list: Workspace[] = []
+      snap.forEach(d => list.push({ id: d.id, ...d.data() } as Workspace))
+      setWorkspaces(list)
+    })
+    
+    // 3. 카테고리 가져오기
+    const unsubCats = onSnapshot(collection(db, 'categories'), (snap) => {
+      const list: Category[] = []
+      snap.forEach(d => list.push({ id: d.id, ...d.data() } as Category))
+      setCategories(list)
+    })
+
+    // 4. LAB본부 설치 작업 현황 가져오기
+    const unsubOverseas = onSnapshot(query(collection(db, 'overseas_work')), (snap) => {
+      const list: OverseasWork[] = []
+      snap.forEach(d => list.push({ id: d.id, ...d.data() } as OverseasWork))
+      setOverseasWorks(list)
+      setLoading(false) // 마지막 구독이 완료되면 로딩 끝
+    })
+
+    return () => {
+      unsubZones()
+      unsubWs()
+      unsubCats()
+      unsubOverseas()
+    }
+  }, [])
+
+  if (loading) return <div className="p-12 text-center text-slate-500">대시보드 데이터 불러오는 중...</div>
+
+  // 오늘 날짜 문자열 ('yyyy-MM-dd')
+  const todayStr = format(new Date(), 'yyyy-MM-dd')
+
+  // --- 1. 작업실 사용 현황 통계 ---
+  // 예약 기간 내에 오늘이 포함되는 활성 구역 수 계산
+  const activeZonesToday = zones.filter(z => {
+    if (!z.startDate || !z.endDate) return false
+    return z.startDate <= todayStr && z.endDate >= todayStr
+  })
+
+  // 브랜드별 통계 (작업실 현황 기준)
+  const zoneBrandCount: Record<string, number> = {}
+  activeZonesToday.forEach(z => {
+    const b = z.brand || 'ETC'
+    zoneBrandCount[b] = (zoneBrandCount[b] || 0) + 1
+  })
+
+  // --- 2. LAB본부 직접 설치 작업 통계 ---
+  const activeWorksToday = overseasWorks.filter(w => {
+    if (w.isFinished) return false // 종료된 작업 제외
+    if (!w.startDate || !w.endDate) return false
+    return w.startDate <= todayStr && w.endDate >= todayStr
+  })
+
+  // 전체 진행 중인 작업 (날짜 상관없이 isFinished가 아닌 작업)
+  const totalOngoingWorks = overseasWorks.filter(w => !w.isFinished)
+  const domesticWorksCount = totalOngoingWorks.filter(w => w.workType !== '해외').length
+  const overseasWorksCount = totalOngoingWorks.filter(w => w.workType === '해외').length
+
+  // 앞으로 7일 이내에 시작하는 예정된 작업 (진행 중이 아닌 것 중에서)
+  const next7DaysStr = format(addDays(new Date(), 7), 'yyyy-MM-dd')
+  
+  const upcomingZones = zones.filter(z => {
+    if (!z.startDate) return false
+    return z.startDate > todayStr && z.startDate <= next7DaysStr
+  }).map(z => ({ ...z, itemType: 'zone' as const }))
+
+  const upcomingOverseas = totalOngoingWorks.filter(w => {
+    if (!w.startDate) return false
+    return w.startDate > todayStr && w.startDate <= next7DaysStr
+  }).map(w => ({ ...w, itemType: 'work' as const }))
+
+  const upcomingAll = [...upcomingZones, ...upcomingOverseas].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
+
+  return (
+    <div className="p-6 bg-slate-50 min-h-full space-y-8">
+      {/* 상단 요약 카드 섹션 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* 카드 1: 오늘 기준 활성화된 작업실 예약 */}
+        <div 
+          onClick={() => setSelectedView(prev => prev === 'activeZones' ? null : 'activeZones')}
+          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+            selectedView === 'activeZones' ? 'ring-2 ring-blue-500 border-blue-500' : 'border-slate-100 hover:shadow-md'
+          }`}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm font-bold text-slate-500">현재 사용 중인 작업 구역</p>
+              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{activeZonesToday.length} <span className="text-base font-medium text-slate-400">구역</span></h3>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
+              🏢
+            </div>
+          </div>
+          <div className="text-xs text-slate-400">오늘 날짜 기준 겹치는 예약 건수</div>
+        </div>
+
+        {/* 카드 2: 오늘 기준 진행 중인 LAB본부 작업 */}
+        <div 
+          onClick={() => setSelectedView(prev => prev === 'activeWorks' ? null : 'activeWorks')}
+          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+            selectedView === 'activeWorks' ? 'ring-2 ring-brand-500 border-brand-500' : 'border-slate-100 hover:shadow-md'
+          }`}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm font-bold text-slate-500">오늘 출장/설치 진행 중</p>
+              <h3 className="text-3xl font-extrabold text-brand-600 mt-1">{activeWorksToday.length} <span className="text-base font-medium text-brand-400">건</span></h3>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 text-xl">
+              🛠️
+            </div>
+          </div>
+          <div className="text-xs text-slate-400">오늘 날짜 포함된 전체 작업</div>
+        </div>
+
+        {/* 카드 3: 전체 진행 중 (국내/해외 비중) */}
+        <div 
+          onClick={() => setSelectedView(prev => prev === 'totalOngoing' ? null : 'totalOngoing')}
+          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+            selectedView === 'totalOngoing' ? 'ring-2 ring-orange-500 border-orange-500' : 'border-slate-100 hover:shadow-md'
+          }`}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm font-bold text-slate-500">LAB본부 직접 설치 작업</p>
+              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{totalOngoingWorks.length} <span className="text-base font-medium text-slate-400">건</span></h3>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 text-xl">
+              🌍
+            </div>
+          </div>
+          <div className="flex items-center gap-4 text-xs font-bold">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400"></span> 국내 {domesticWorksCount}건</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-400"></span> 해외 {overseasWorksCount}건</span>
+          </div>
+        </div>
+
+        {/* 카드 4: 7일 내 임박한 작업 */}
+        <div 
+          onClick={() => setSelectedView(prev => prev === 'upcoming' ? null : 'upcoming')}
+          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+            selectedView === 'upcoming' ? 'ring-2 ring-green-500 border-green-500' : 'border-slate-100 hover:shadow-md'
+          }`}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm font-bold text-slate-500">7일 내 시작 예정 작업</p>
+              <h3 className="text-3xl font-extrabold text-green-600 mt-1">{upcomingAll.length} <span className="text-base font-medium text-green-400">건</span></h3>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 text-xl">
+              ⏰
+            </div>
+          </div>
+          <div className="text-xs text-slate-400">일정이 곧 시작되는 설치 작업 건수</div>
+        </div>
+      </div>
+
+      {/* 선택된 요약 카드 상세 내용 */}
+      {selectedView && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+              {selectedView === 'activeZones' && <><span>🏢</span> 현재 사용 중인 작업 구역 상세</>}
+              {selectedView === 'activeWorks' && <><span>🛠️</span> 오늘 출장/설치 진행 중 상세</>}
+              {selectedView === 'totalOngoing' && <><span>🌍</span> LAB본부 직접 설치 작업 상세</>}
+              {selectedView === 'upcoming' && <><span>⏰</span> 7일 내 시작 예정 작업 상세</>}
+            </h3>
+            <button 
+              onClick={() => setSelectedView(null)}
+              className="text-slate-400 hover:text-slate-600 font-bold px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm transition-colors"
+            >
+              닫기 ✕
+            </button>
+          </div>
+          
+          <div className="flex flex-col space-y-3">
+            {selectedView === 'activeZones' && activeZonesToday.map(z => {
+              const ws = workspaces.find(w => w.id === z.workspaceId)
+              const cat = categories.find(c => c.id === ws?.categoryId)
+              return (
+                <div key={z.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <span 
+                      className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: z.color || '#327fff' }}
+                    >
+                      {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                    </span>
+                    <span 
+                      className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                      onClick={() => setViewingZone(z)}
+                    >
+                      {z.project || z.name || '-'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                    <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{cat?.name} {ws?.name}</span></span>
+                    <span className="flex items-center gap-2">👤 {z.team || z.manager || z.name}</span>
+                    {z.purpose && <span className="flex items-center gap-2">📝 <span className="truncate max-w-[150px]">{z.purpose}</span></span>}
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full shrink-0">
+                      {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+
+            {(selectedView === 'activeWorks' || selectedView === 'totalOngoing') && (() => {
+              const list = selectedView === 'activeWorks' ? activeWorksToday : totalOngoingWorks
+              return list.map(w => (
+                <div key={w.id} className="p-4 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {w.workType || '국내'}
+                    </span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {w.status || '예정'}
+                    </span>
+                    <span 
+                      className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
+                    >
+                      {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
+                    </span>
+                    <span 
+                      className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                      onClick={() => setViewingWork(w)}
+                    >
+                      {w.projectName}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                    <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{w.location}</span></span>
+                    <span className="flex items-center gap-2">👤 <span className="truncate max-w-[100px]">{w.manager}</span></span>
+                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full shrink-0">
+                      {w.startDate} ~ {w.endDate}
+                    </span>
+                  </div>
+                </div>
+              ))
+            })()}
+
+            {selectedView === 'upcoming' && upcomingAll.map((item, idx) => {
+              if (item.itemType === 'zone') {
+                const z = item as (Zone & {itemType: 'zone'})
+                const ws = workspaces.find(w => w.id === z.workspaceId)
+                const cat = categories.find(c => c.id === ws?.categoryId)
+                return (
+                  <div key={`zone-${z.id}-${idx}`} className="p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 shrink-0">작업실</span>
+                      <span 
+                        className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                        style={{ backgroundColor: z.color || '#327fff' }}
+                      >
+                        {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                      </span>
+                      <span 
+                        className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                        onClick={() => setViewingZone(z)}
+                      >
+                        {z.project || z.name || '-'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                      <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{cat?.name} {ws?.name}</span></span>
+                      <span className="flex items-center gap-2">👤 {z.manager || '-'}</span>
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full shrink-0">
+                        {z.startDate} 시작
+                      </span>
+                    </div>
+                  </div>
+                )
+              } else {
+                const w = item as (OverseasWork & {itemType: 'work'})
+                return (
+                  <div key={`work-${w.id}-${idx}`} className="p-4 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="px-2 py-1 rounded text-xs font-bold bg-brand-100 text-brand-700 shrink-0">설치작업</span>
+                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {w.workType || '국내'}
+                    </span>
+                    <span 
+                      className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
+                    >
+                      {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
+                    </span>
+                    <span 
+                      className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                      onClick={() => setViewingWork(w)}
+                    >
+                      {w.projectName}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                    <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{w.location}</span></span>
+                    <span className="flex items-center gap-2">👤 <span className="truncate max-w-[100px]">{w.manager}</span></span>
+                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full shrink-0">
+                      {w.startDate} 시작
+                    </span>
+                  </div>
+                  </div>
+                )
+              }
+            })}
+          </div>
+
+          {/* Empty States */}
+          {selectedView === 'activeZones' && activeZonesToday.length === 0 && (
+            <div className="py-16 text-center text-slate-400">현재 사용 중인 작업 구역이 없습니다.</div>
+          )}
+          {selectedView === 'activeWorks' && activeWorksToday.length === 0 && (
+            <div className="py-16 text-center text-slate-400">오늘 진행 중인 출장/설치 작업이 없습니다.</div>
+          )}
+          {selectedView === 'totalOngoing' && totalOngoingWorks.length === 0 && (
+            <div className="py-16 text-center text-slate-400">진행 중인 작업이 없습니다.</div>
+          )}
+          {selectedView === 'upcoming' && upcomingAll.length === 0 && (
+            <div className="py-16 text-center text-slate-400">7일 내 시작 예정인 일정이 없습니다.</div>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 중앙 왼쪽: 오늘 사용 중인 작업실 현황 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span>🏢</span> 오늘 사용 중인 작업실 현황
+          </h3>
+          <div className="flex-1 overflow-y-auto pr-2">
+            {activeZonesToday.length > 0 ? (
+              <div className="space-y-3">
+                {activeZonesToday.slice(0, 5).map(z => {
+                  const ws = workspaces.find(w => w.id === z.workspaceId)
+                  const cat = categories.find(c => c.id === ws?.categoryId)
+                  return (
+                    <div key={z.id} className="p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group">
+                      <div className="flex justify-between items-center mb-1">
+                        <div className="flex items-center gap-2">
+                          <span 
+                            className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
+                            style={{ backgroundColor: z.color || '#327fff' }}
+                          >
+                            {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                          </span>
+                          <span 
+                            className="font-bold text-sm text-slate-800 truncate max-w-[200px] cursor-pointer hover:text-brand-600 hover:underline"
+                            onClick={() => setViewingZone(z)}
+                          >
+                            {z.project || z.name || '-'}
+                          </span>
+                        </div>
+                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
+                          {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                        <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
+                        <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+                {activeZonesToday.length > 5 && (
+                  <div className="text-center text-xs text-slate-400 pt-2 font-medium">
+                    + {activeZonesToday.length - 5}건의 작업실 예약이 더 있습니다.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm py-12">
+                오늘 활성화된 작업실 예약이 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 중앙 오른쪽: 7일 내 시작 예정인 설치 작업 목록 */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
+          <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <span>🚀</span> 곧 시작되는 출장/설치 및 작업실 예약 (7일 내)
+          </h3>
+          <div className="flex-1 overflow-y-auto pr-2">
+            {upcomingAll.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingAll.slice(0, 5).map((item, idx) => {
+                  if (item.itemType === 'zone') {
+                    const z = item as (Zone & {itemType: 'zone'})
+                    const ws = workspaces.find(w => w.id === z.workspaceId)
+                    const cat = categories.find(c => c.id === ws?.categoryId)
+                    return (
+                      <div key={`zone-${z.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">작업실</span>
+                            <span 
+                              className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
+                              style={{ backgroundColor: z.color || '#327fff' }}
+                            >
+                              {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                            </span>
+                            <span 
+                              className="font-bold text-sm text-slate-800 truncate max-w-[150px] cursor-pointer hover:text-brand-600 hover:underline"
+                              onClick={() => setViewingZone(z)}
+                            >
+                              {z.project || z.name || '-'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
+                            {z.startDate} 시작
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
+                          <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                        </div>
+                      </div>
+                    )
+                  } else {
+                    const w = item as (OverseasWork & {itemType: 'work'})
+                    return (
+                      <div key={`work-${w.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-700">설치작업</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {w.workType || '국내'}
+                            </span>
+                            <span 
+                              className="inline-block px-1 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                              style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
+                            >
+                              {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
+                            </span>
+                            <span 
+                              className="font-bold text-sm text-slate-800 truncate max-w-[150px] cursor-pointer hover:text-brand-600 hover:underline"
+                              onClick={() => setViewingWork(w)}
+                            >
+                              {w.projectName}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full shrink-0">
+                            {w.startDate} 시작
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{w.location}</span></span>
+                        </div>
+                      </div>
+                    )
+                  }
+                })}
+                {upcomingAll.length > 5 && (
+                  <div className="text-center text-xs text-slate-400 pt-2 font-medium">
+                    + {upcomingAll.length - 5}건의 예정된 일정이 더 있습니다.
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-sm py-12">
+                7일 내 시작 예정인 일정이 없습니다.
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {viewingZone && (
+        <ZoneViewModal 
+          zone={viewingZone} 
+          workspace={workspaces.find(w => w.id === viewingZone.workspaceId)}
+          onClose={() => setViewingZone(null)} 
+          onEdit={() => {}} // 대시보드에서는 편집 기능 미지원
+        />
+      )}
+
+      {viewingWork && (
+        <WorkViewModal 
+          item={viewingWork} 
+          onClose={() => setViewingWork(null)} 
+          onEdit={() => {}} // 대시보드에서는 편집 기능 미지원
+          onDelete={() => {}} // 대시보드에서는 삭제 기능 미지원
+        />
+      )}
     </div>
   )
 }
