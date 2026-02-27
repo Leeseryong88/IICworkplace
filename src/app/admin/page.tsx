@@ -1759,11 +1759,11 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
         <div className="mt-8 border-t pt-4 flex justify-between items-center">
           <button
             onClick={async () => {
-              if (confirm(`'${zone.project || zone.name}' 작업을 종료하시겠습니까?`)) {
+              if (confirm(`'${item.projectName}' 작업을 종료하시겠습니까?`)) {
                 try {
-                  const zoneRef = doc(db, 'zones', zone.id);
-                  await updateDoc(zoneRef, {
-                    isFinished: !zone.isFinished,
+                  const workRef = doc(db, 'overseas_work', item.id);
+                  await updateDoc(workRef, {
+                    isFinished: !item.isFinished,
                     updatedAt: Date.now()
                   });
                   onClose();
@@ -1774,10 +1774,10 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
               }
             }}
             className={`rounded-lg px-6 py-2.5 text-sm font-bold shadow-md transition-colors ${
-              zone.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+              item.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
             }`}
           >
-            {zone.isFinished ? '작업 복구' : '작업 종료'}
+            {item.isFinished ? '작업 복구' : '작업 종료'}
           </button>
           <button 
             onClick={onClose}
@@ -3414,12 +3414,14 @@ function WorkspacesOverview({
 
 function ZoneEditor({ 
   activeWorkspaceId,
+  zoneId,
   filterStart,
   setFilterStart,
   filterEnd,
   setFilterEnd 
 }: { 
   activeWorkspaceId: string;
+  zoneId?: string;
   filterStart: string;
   setFilterStart: (v: string) => void;
   filterEnd: string;
@@ -3807,6 +3809,7 @@ function ZoneEditor({
 function ZoneEditorModal({ 
   activeWorkspaceId, 
   onClose,
+  zoneId,
   filterStart,
   setFilterStart,
   filterEnd,
@@ -3814,6 +3817,7 @@ function ZoneEditorModal({
 }: { 
   activeWorkspaceId: string; 
   onClose: () => void;
+  zoneId?: string;
   filterStart: string;
   setFilterStart: (v: string) => void;
   filterEnd: string;
@@ -3825,6 +3829,7 @@ function ZoneEditorModal({
         <button className="absolute right-3 top-3 rounded border px-2 py-1 text-sm" onClick={onClose}>닫기</button>
         <ZoneEditor 
           activeWorkspaceId={activeWorkspaceId} 
+          zoneId={zoneId}
           filterStart={filterStart}
           setFilterStart={setFilterStart}
           filterEnd={filterEnd}
