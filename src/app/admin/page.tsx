@@ -1888,7 +1888,7 @@ function DashboardView() {
   return (
     <div className="p-6 bg-slate-50 min-h-full space-y-8">
       {/* 상단 요약 카드 섹션 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* 카드 1: 작업실 사용현황 개요 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'activeZones' ? null : 'activeZones')}
@@ -1947,44 +1947,6 @@ function DashboardView() {
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400"></span> 국내 {domesticWorksCount}건</span>
             <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-400"></span> 해외 {overseasWorksCount}건</span>
           </div>
-        </div>
-
-        {/* 카드 4: 7일 내 임박한 작업 */}
-        <div 
-          onClick={() => setSelectedView(prev => prev === 'upcoming' ? null : 'upcoming')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
-            selectedView === 'upcoming' ? 'ring-2 ring-green-500 border-green-500' : 'border-slate-100 hover:shadow-md'
-          }`}
-        >
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-sm font-bold text-slate-500">7일 내 시작 예정 작업</p>
-              <h3 className="text-3xl font-extrabold text-green-600 mt-1">{upcomingAll.length} <span className="text-base font-medium text-green-400">건</span></h3>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center text-green-600 text-xl">
-              ⏰
-            </div>
-          </div>
-          <div className="text-xs text-slate-400">일정이 곧 시작되는 설치 작업 건수</div>
-        </div>
-
-        {/* 카드 5: 7일 내 종료 예정 작업 */}
-        <div 
-          onClick={() => setSelectedView(prev => prev === 'endingSoon' ? null : 'endingSoon')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
-            selectedView === 'endingSoon' ? 'ring-2 ring-red-500 border-red-500' : 'border-slate-100 hover:shadow-md'
-          }`}
-        >
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-sm font-bold text-slate-500">7일 내 종료 예정 작업</p>
-              <h3 className="text-3xl font-extrabold text-red-600 mt-1">{endingSoonAll.length} <span className="text-base font-medium text-red-400">건</span></h3>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xl">
-              🏁
-            </div>
-          </div>
-          <div className="text-xs text-slate-400">곧 종료될 예정인 작업 및 예약</div>
         </div>
       </div>
 
@@ -2246,54 +2208,90 @@ function DashboardView() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 중앙 왼쪽: 오늘 사용 중인 작업실 현황 */}
+        {/* 중앙 왼쪽: 7일 내 종료 예정 작업 */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col">
           <h3 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-            <span>🏢</span> 오늘 사용 중인 작업실 현황
+            <span>🏁</span> 7일 내 종료 예정 작업
           </h3>
           <div className="flex-1 overflow-y-auto pr-2">
-            {activeZonesToday.length > 0 ? (
+            {endingSoonAll.length > 0 ? (
               <div className="space-y-3">
-                {activeZonesToday.slice(0, 5).map(z => {
-                  const ws = workspaces.find(w => w.id === z.workspaceId)
-                  const cat = categories.find(c => c.id === ws?.categoryId)
-                  return (
-                    <div key={z.id} className="p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group">
-                      <div className="flex justify-between items-center mb-1">
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
-                            style={{ backgroundColor: z.color || '#327fff' }}
-                          >
-                            {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
-                          </span>
-                          <span 
-                            className="font-bold text-sm text-slate-800 truncate max-w-[200px] cursor-pointer hover:text-brand-600 hover:underline"
-                            onClick={() => setViewingZone(z)}
-                          >
-                            {z.project || z.name || '-'}
+                {endingSoonAll.slice(0, 5).map((item, idx) => {
+                  if (item.itemType === 'zone') {
+                    const z = item as (Zone & {itemType: 'zone'})
+                    const ws = workspaces.find(w => w.id === z.workspaceId)
+                    const cat = categories.find(c => c.id === ws?.categoryId)
+                    return (
+                      <div key={`zone-${z.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">작업실</span>
+                            <span 
+                              className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
+                              style={{ backgroundColor: z.color || '#327fff' }}
+                            >
+                              {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                            </span>
+                            <span 
+                              className="font-bold text-sm text-slate-800 truncate max-w-[150px] cursor-pointer hover:text-brand-600 hover:underline"
+                              onClick={() => setViewingZone(z)}
+                            >
+                              {z.project || z.name || '-'}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0">
+                            {z.endDate === todayStr ? '오늘 종료' : `${z.endDate} 종료`}
                           </span>
                         </div>
-                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-                          {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
-                        </span>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
+                          <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                        <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
-                        <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                    )
+                  } else {
+                    const w = item as (OverseasWork & {itemType: 'work'})
+                    return (
+                      <div key={`work-${w.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group">
+                        <div className="flex justify-between items-center mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-700">설치작업</span>
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                              {w.workType || '국내'}
+                            </span>
+                            <span 
+                              className="inline-block px-1 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                              style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
+                            >
+                              {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
+                            </span>
+                            <span 
+                              className="font-bold text-sm text-slate-800 truncate max-w-[150px] cursor-pointer hover:text-brand-600 hover:underline"
+                              onClick={() => setViewingWork(w)}
+                            >
+                              {w.projectName}
+                            </span>
+                          </div>
+                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0">
+                            {w.endDate === todayStr ? '오늘 종료' : `${w.endDate} 종료`}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{w.location}</span></span>
+                        </div>
                       </div>
-                    </div>
-                  )
+                    )
+                  }
                 })}
-                {activeZonesToday.length > 5 && (
+                {endingSoonAll.length > 5 && (
                   <div className="text-center text-xs text-slate-400 pt-2 font-medium">
-                    + {activeZonesToday.length - 5}건의 작업실 예약이 더 있습니다.
+                    + {endingSoonAll.length - 5}건의 예정된 일정이 더 있습니다.
                   </div>
                 )}
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm py-12">
-                오늘 활성화된 작업실 예약이 없습니다.
+                7일 내 종료 예정인 일정이 없습니다.
               </div>
             )}
           </div>
