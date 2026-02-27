@@ -50,10 +50,13 @@ export default function AdminPage() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('')
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>('')
   const [zoneModalOpen, setZoneModalOpen] = useState(false)
+  const [zoneEditor, setZoneEditor] = useState<{isOpen: boolean; categoryId: string; workspaceId: string; zoneId?: string}>({ isOpen: false, categoryId: '', workspaceId: '' })
   
   // 공용 기간 필터 상태 (작업실 관리와 구역 편집에서 공유)
   const [filterStart, setFilterStart] = useState('')
   const [filterEnd, setFilterEnd] = useState('')
+  const [showFinishedZones, setShowFinishedZones] = useState(false)
+  const [showFinishedWorks, setShowFinishedWorks] = useState(false)
 
   // 하이드레이션 오류 방지를 위해 마운트 후 날짜 설정
   useEffect(() => {
@@ -160,7 +163,15 @@ export default function AdminPage() {
                 selectedCategoryId={selectedCategoryId}
                 setSelectedCategoryId={setSelectedCategoryId}
                 setSelectedWorkspaceId={setSelectedWorkspaceId}
-                openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }}
+                openZoneEditor={(cid: string, wid: string, zid?: string) => { 
+                  setSelectedCategoryId(cid); 
+                  setSelectedWorkspaceId(wid); 
+                  if(zid) { 
+                    setZoneEditor({ isOpen: true, categoryId: cid, workspaceId: wid, zoneId: zid }) 
+                  } else { 
+                    setZoneModalOpen(true) 
+                  } 
+                }}
                 filterStart={filterStart}
                 setFilterStart={setFilterStart}
                 filterEnd={filterEnd}
@@ -172,24 +183,67 @@ export default function AdminPage() {
           {activeTab === 'all-zones' && (
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">📋</span> 작업실 사용 현황
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span className="text-xl">📋</span> 작업실 사용 현황
+                      </h2>
+                      <button 
+                        onClick={() => setShowFinishedZones(!showFinishedZones)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
+                          showFinishedZones 
+                            ? 'bg-slate-800 text-white border-slate-800' 
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {showFinishedZones ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
+                </div>
               </div>
-              <AllZonesList openZoneEditor={(cid: string, wid: string) => { setSelectedCategoryId(cid); setSelectedWorkspaceId(wid); setZoneModalOpen(true) }} />
+              <AllZonesList 
+                showFinished={showFinishedZones}
+                openZoneEditor={(cid: string, wid: string, zid?: string) => { 
+                  setSelectedCategoryId(cid); 
+                  setSelectedWorkspaceId(wid); 
+                  if(zid) { 
+                    setZoneEditor({ isOpen: true, categoryId: cid, workspaceId: wid, zoneId: zid }) 
+                  } else { 
+                    setZoneModalOpen(true) 
+                  } 
+                }} 
+              />
             </div>
           )}
 
           {activeTab === 'overseas-work' && (
             <div className="animate-in fade-in duration-300">
               <div className="bg-slate-50 px-6 py-4 border-b">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">🛠️</span> LAB본부 직접 설치 작업
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span className="text-xl">🛠️</span> LAB본부 직접 설치 작업
+                      </h2>
+                      <button 
+                        onClick={() => setShowFinishedWorks(!showFinishedWorks)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
+                          showFinishedWorks 
+                            ? 'bg-slate-800 text-white border-slate-800' 
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {showFinishedWorks ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5 ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
+                </div>
               </div>
-              <OverseasWorkList />
+              <OverseasWorkList showFinished={showFinishedWorks} />
             </div>
           )}
 
@@ -217,15 +271,27 @@ export default function AdminPage() {
           setFilterEnd={setFilterEnd}
         />
       )}
+      
+      {zoneEditor.isOpen && (
+        <ZoneEditorModal 
+          activeWorkspaceId={zoneEditor.workspaceId} 
+          onClose={() => setZoneEditor({ isOpen: false, categoryId: '', workspaceId: '' })} 
+          zoneId={zoneEditor.zoneId}
+          filterStart={filterStart}
+          setFilterStart={setFilterStart}
+          filterEnd={filterEnd}
+          setFilterEnd={setFilterEnd}
+        />
+      )}
     </div>
   )
 }
 
-function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: string) => void }) {
-  const [zones, setZones] = useState<Zone[]>([])
+function AllZonesList({ zones: propZones, openZoneEditor, showFinished }: { zones?: Zone[], openZoneEditor: (cid: string, wid: string, zid?: string) => void, showFinished: boolean }) {
+  const [zones, setZones] = useState<Zone[]>(propZones || [])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!propZones)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
@@ -235,12 +301,17 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
 
   useEffect(() => {
     setCurrentDate(new Date())
-    // 실시간 데이터 구독
-    const unsubZones = onSnapshot(query(collection(db, 'zones'), orderBy('updatedAt', 'desc')), (snap) => {
+    // prop으로 zones를 받지 않은 경우에만 구독
+    const unsubZones = !propZones ? onSnapshot(query(collection(db, 'zones'), orderBy('updatedAt', 'desc')), (snap) => {
       const list: Zone[] = []
       snap.forEach(d => list.push({ id: d.id, ...d.data() } as Zone))
       setZones(list)
-    })
+    }) : undefined;
+    
+    // propZones가 변경되면 로컬 상태 업데이트
+    if (propZones) {
+      setZones(propZones);
+    }
     const unsubWs = onSnapshot(collection(db, 'workspaces'), (snap) => {
       const list: Workspace[] = []
       snap.forEach(d => list.push({ id: d.id, ...d.data() } as Workspace))
@@ -253,8 +324,12 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
       setLoading(false)
     })
 
-    return () => { unsubZones(); unsubWs(); unsubCats(); }
-  }, [])
+    return () => { 
+      if (unsubZones) unsubZones(); 
+      unsubWs(); 
+      unsubCats(); 
+    }
+  }, [propZones])
 
   const filteredZones = useMemo(() => {
     const filtered = zones.filter(z => {
@@ -264,6 +339,13 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
       // 브랜드 필터링
       if (selectedBrands.length > 0 && (!z.brand || !selectedBrands.includes(z.brand))) {
         return false
+      }
+
+      // 종료 여부 필터링
+      if (showFinished) {
+        if (!z.isFinished) return false
+      } else {
+        if (z.isFinished) return false
       }
 
       const searchStr = `${z.team || ''} ${z.name || ''} ${z.project || ''} ${z.manager || ''} ${z.brand || ''} ${ws?.name || ''} ${cat?.name || ''}`.toLowerCase()
@@ -281,7 +363,7 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
         return dateB.localeCompare(dateA)
       }
     })
-  }, [zones, workspaces, categories, selectedBrands, searchTerm, sortOrder])
+  }, [zones, workspaces, categories, selectedBrands, searchTerm, sortOrder, showFinished])
 
   if (loading) return <div className="p-8 text-center text-slate-500">불러오는 중...</div>
 
@@ -289,13 +371,21 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
     <div className="p-4">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-4">
-          <input 
-            type="text" 
-            placeholder="팀명, 작업실, 카테고리 등으로 검색..." 
-            className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <div className="flex items-center gap-2">
+            {showFinished && (
+              <span className="flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-600 animate-pulse">
+                <span className="h-2 w-2 rounded-full bg-slate-400" />
+                종료된 기록 열람 중
+              </span>
+            )}
+            <input 
+              type="text" 
+              placeholder="팀명, 작업실, 카테고리 등으로 검색..." 
+              className="w-full max-w-xs rounded border px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
           
           <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
             <span className="text-xs font-semibold text-slate-400 mr-1">브랜드:</span>
@@ -330,19 +420,21 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
             )}
           </div>
         </div>
-        <div className="flex items-center rounded-lg border bg-slate-50 p-1">
-          <button 
-            onClick={() => setViewMode('list')}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            목록
-          </button>
-          <button 
-            onClick={() => setViewMode('calendar')}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
-          >
-            달력
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-lg border bg-slate-50 p-1">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              목록
+            </button>
+            <button 
+              onClick={() => setViewMode('calendar')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-brand-600' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              달력
+            </button>
+          </div>
         </div>
       </div>
 
@@ -366,7 +458,8 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
                     <span className={`text-[10px] transition-colors ${sortOrder === 'desc' ? 'text-brand-600' : 'text-slate-300 group-hover:text-slate-500'}`}>▼</span>
                   </div>
                 </th>
-                <th className="px-3 py-2 border-b whitespace-nowrap w-[10%]">담당자</th>
+                <th className="px-3 py-2 border-b whitespace-nowrap w-[8%]">담당자</th>
+                <th className="px-2 py-2 border-b whitespace-nowrap w-[8%] text-center">상태</th>
               </tr>
             </thead>
             <tbody className="divide-y text-[clamp(11px,1vw+2px,13px)]">
@@ -407,18 +500,42 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
                       <span className="font-medium truncate">{z.team || z.name}</span>
                     </td>
                     <td className="px-3 py-3 text-slate-500 whitespace-nowrap truncate">
-                      {z.startDate || '미정'} ~ {z.endDate || '미정'}
+                      {z.startDate?.slice(5) || '미정'} ~ {z.endDate?.slice(5) || '미정'}
                     </td>
                     <td className="px-3 py-3 text-slate-600 whitespace-nowrap truncate">{z.manager || '-'}</td>
+                    <td className="px-2 py-3 whitespace-nowrap text-center">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (confirm(`'${z.project || z.name}' 작업을 종료하시겠습니까?`)) {
+                            try {
+                              const zoneRef = doc(db, 'zones', z.id);
+                              await updateDoc(zoneRef, {
+                                isFinished: !z.isFinished,
+                                updatedAt: Date.now()
+                              });
+                            } catch (error) {
+                              console.error("작업 종료 오류:", error);
+                              alert("작업 종료 중 오류가 발생했습니다.");
+                            }
+                          }
+                        }}
+                        className={`rounded px-2 py-1 text-[11px] font-bold shadow-sm transition-colors ${
+                          z.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+                        }`}
+                      >
+                        {z.isFinished ? '복구' : '종료'}
+                      </button>
+                    </td>
                   </tr>
                 )
               })}
               {filteredZones.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400">
-                    {searchTerm ? '검색 결과가 없습니다.' : '등록된 구역이 없습니다.'}
-                  </td>
-                </tr>
+                  <tr>
+                    <td colSpan={8} className="px-4 py-8 text-center text-slate-400">
+                      {searchTerm ? '검색 결과가 없습니다.' : '등록된 구역이 없습니다.'}
+                    </td>
+                  </tr>
               )}
             </tbody>
           </table>
@@ -439,11 +556,11 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
           workspace={workspaces.find(w => w.id === viewingZone.workspaceId)}
           category={categories.find(c => c.id === workspaces.find(w => w.id === viewingZone.workspaceId)?.categoryId)}
           onClose={() => setViewingZone(null)} 
-          onEdit={() => {
+          onEdit={(zid?: string) => {
             const ws = workspaces.find(w => w.id === viewingZone.workspaceId)
             if (ws) {
               setViewingZone(null)
-              openZoneEditor(ws.categoryId, ws.id)
+              openZoneEditor(ws.categoryId, ws.id, zid)
             }
           }}
         />
@@ -452,12 +569,13 @@ function AllZonesList({ openZoneEditor }: { openZoneEditor: (cid: string, wid: s
   )
 }
 
-function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView }: { 
+function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView, showFinished }: { 
   zones: Zone[], 
   currentDate: Date | null, 
   setCurrentDate: (d: Date) => void,
   workspaces: Workspace[],
-  onView: (z: Zone) => void
+  onView: (z: Zone) => void,
+  showFinished?: boolean
 }) {
   if (!currentDate) return <div className="p-8 text-center text-slate-500">달력을 불러오는 중...</div>
   const monthStart = startOfMonth(currentDate)
@@ -522,7 +640,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView }
             const weekStart = week[0]
             const weekEnd = week[6]
 
-            // 이 주에 걸쳐 있는 구역들
+                // 이 주에 걸쳐 있는 구역들 (종료된 작업 필터링 반영)
             const weekZones = monthZones.filter(z => {
               const zs = parseISO(z.startDate!)
               const ze = parseISO(z.endDate!)
@@ -595,7 +713,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView }
                             style={{ 
                               gridColumn: `${colStart} / span ${colSpan}`,
                             }}
-                            title={`${z.project || '프로젝트'} | ${z.team || z.name} (${z.startDate} ~ ${z.endDate})`}
+                            title={`${z.project || '프로젝트'} | ${z.team || z.name} (${z.startDate?.slice(5)} ~ ${z.endDate?.slice(5)})`}
                             onClick={() => onView(z)}
                           >
                             {/* 연결 실 (나머지 일) */}
@@ -670,7 +788,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView }
   )
 }
 
-function OverseasWorkList() {
+function OverseasWorkList({ showFinished }: { showFinished: boolean }) {
   const [items, setItems] = useState<OverseasWork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -684,7 +802,6 @@ function OverseasWorkList() {
   const [inlineDateEditId, setInlineDateEditId] = useState<string | null>(null)
   const [inlineRange, setInlineRange] = useState<[Date | null, Date | null]>([null, null])
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 })
-  const [showFinished, setShowFinished] = useState(false)
 
   useEffect(() => {
     setCurrentDate(new Date())
@@ -872,17 +989,6 @@ function OverseasWorkList() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setShowFinished(!showFinished)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
-              showFinished 
-                ? 'bg-slate-800 text-white border-slate-800' 
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-            }`}
-          >
-            {showFinished ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
-          </button>
-
           <div className="flex items-center rounded-lg border bg-slate-50 p-1">
             <button 
               onClick={() => setViewMode('list')}
@@ -1024,7 +1130,7 @@ function OverseasWorkList() {
                     ) : (
                       item.startDate && item.endDate ? (
                         <div className="flex items-center gap-1 group inline-flex max-w-full overflow-hidden truncate">
-                          <span className="truncate text-[0.9em]">{item.startDate} ~ {item.endDate}</span>
+                          <span className="truncate text-[0.9em]">{item.startDate?.slice(5)} ~ {item.endDate?.slice(5)}</span>
                           <button 
                             onClick={(e) => { 
                               const rect = e.currentTarget.getBoundingClientRect();
@@ -1055,13 +1161,13 @@ function OverseasWorkList() {
                   <td className="px-2 py-3 text-center whitespace-nowrap">
                     <button
                       onClick={() => handleToggleFinish(item.id, item.isFinished)}
-                      className={`inline-block px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                      className={`rounded px-2 py-1 text-[11px] font-bold shadow-sm transition-colors ${
                         item.isFinished 
-                          ? 'bg-blue-50 text-blue-600 border border-blue-100 hover:bg-blue-100' 
-                          : 'bg-red-50 text-red-600 border border-red-100 hover:bg-red-100'
+                          ? 'bg-slate-400 text-white hover:bg-slate-500' 
+                          : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
                       }`}
                     >
-                      {item.isFinished ? '복구하기' : '작업종료'}
+                      {item.isFinished ? '복구' : '종료'}
                     </button>
                   </td>
                 </tr>
@@ -1348,7 +1454,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
   )
 }
 
-function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Zone, workspace?: Workspace, category?: Category, onClose: () => void, onEdit: () => void }) {
+function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Zone, workspace?: Workspace, category?: Category, onClose: () => void, onEdit: (zid?: string) => void }) {
   const [imgNatural, setImgNatural] = useState({ w: 1000, h: 1000 })
   const planUrl = workspace?.planUrl
 
@@ -1362,10 +1468,35 @@ function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Z
               style={{ backgroundColor: zone.color || '#327fff' }} 
             />
             <h3 className="text-xl font-bold text-slate-900">{zone.project || zone.name || '작업 상세'}</h3>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${zone.isFinished ? 'bg-slate-100 text-slate-600' : 'bg-brand-100 text-brand-700'}`}>
+              {zone.isFinished ? '작업종료' : '진행중'}
+            </span>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (confirm(`'${zone.project || zone.name}' 작업을 종료하시겠습니까?`)) {
+                  try {
+                    const zoneRef = doc(db, 'zones', zone.id);
+                    await updateDoc(zoneRef, {
+                      isFinished: !zone.isFinished,
+                      updatedAt: Date.now()
+                    });
+                    onClose();
+                  } catch (error) {
+                    console.error("작업 종료 오류:", error);
+                    alert("작업 종료 중 오류가 발생했습니다.");
+                  }
+                }
+              }}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold shadow-sm transition-colors ${
+                zone.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+              }`}
+            >
+              {zone.isFinished ? '복구' : '종료'}
+            </button>
             <button 
-              onClick={onEdit}
+              onClick={() => onEdit(zone.id)}
               className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-700 hover:bg-brand-100 transition-colors"
             >
               편집
@@ -1392,7 +1523,7 @@ function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Z
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1">사용 기간</label>
                 <p className="font-semibold text-slate-700">
-                  {zone.startDate && zone.endDate ? `${zone.startDate} ~ ${zone.endDate}` : '미정'}
+                  {zone.startDate && zone.endDate ? `${zone.startDate.slice(5)} ~ ${zone.endDate.slice(5)}` : '미정'}
                 </p>
               </div>
             </div>
@@ -1472,7 +1603,29 @@ function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Z
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-4 flex justify-end">
+        <div className="mt-8 border-t pt-4 flex justify-between items-center">
+          <button
+            onClick={async () => {
+              if (confirm(`'${zone.project || zone.name}' 작업을 종료하시겠습니까?`)) {
+                try {
+                  const zoneRef = doc(db, 'zones', zone.id);
+                  await updateDoc(zoneRef, {
+                    isFinished: !zone.isFinished,
+                    updatedAt: Date.now()
+                  });
+                  onClose();
+                } catch (error) {
+                  console.error("작업 종료 오류:", error);
+                  alert("작업 종료 중 오류가 발생했습니다.");
+                }
+              }
+            }}
+            className={`rounded-lg px-6 py-2.5 text-sm font-bold shadow-md transition-colors ${
+              zone.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+            }`}
+          >
+            {zone.isFinished ? '작업 복구' : '작업 종료'}
+          </button>
           <button 
             onClick={onClose}
             className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
@@ -1500,11 +1653,33 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
             <h3 className="text-xl font-bold text-slate-900">{item.projectName}</h3>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (confirm(`'${item.projectName}' 작업을 종료하시겠습니까?`)) {
+                  try {
+                    const workRef = doc(db, 'overseas_work', item.id);
+                    await updateDoc(workRef, {
+                      isFinished: !item.isFinished,
+                      updatedAt: Date.now()
+                    });
+                    onClose();
+                  } catch (error) {
+                    console.error("작업 종료 오류:", error);
+                    alert("작업 종료 중 오류가 발생했습니다.");
+                  }
+                }
+              }}
+              className={`rounded-lg px-3 py-1.5 text-sm font-bold shadow-sm transition-colors ${
+                item.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100'
+              }`}
+            >
+              {item.isFinished ? '복구' : '종료'}
+            </button>
             <button 
-              onClick={onEdit}
+              onClick={() => onEdit()}
               className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-700 hover:bg-brand-100 transition-colors"
             >
-              수정
+              편집
             </button>
             <button 
               onClick={onDelete}
@@ -1540,7 +1715,7 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
               <div>
                 <label className="block text-xs font-bold text-slate-400 mb-1">출장 일정</label>
                 <p className="font-semibold text-slate-700">
-                  {item.startDate && item.endDate ? `${item.startDate} ~ ${item.endDate}` : '미정'}
+                  {item.startDate && item.endDate ? `${item.startDate.slice(5)} ~ ${item.endDate.slice(5)}` : '미정'}
                 </p>
               </div>
             </div>
@@ -1581,7 +1756,29 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-4 flex justify-end">
+        <div className="mt-8 border-t pt-4 flex justify-between items-center">
+          <button
+            onClick={async () => {
+              if (confirm(`'${zone.project || zone.name}' 작업을 종료하시겠습니까?`)) {
+                try {
+                  const zoneRef = doc(db, 'zones', zone.id);
+                  await updateDoc(zoneRef, {
+                    isFinished: !zone.isFinished,
+                    updatedAt: Date.now()
+                  });
+                  onClose();
+                } catch (error) {
+                  console.error("작업 종료 오류:", error);
+                  alert("작업 종료 중 오류가 발생했습니다.");
+                }
+              }
+            }}
+            className={`rounded-lg px-6 py-2.5 text-sm font-bold shadow-md transition-colors ${
+              zone.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+            }`}
+          >
+            {zone.isFinished ? '작업 복구' : '작업 종료'}
+          </button>
           <button 
             onClick={onClose}
             className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
@@ -1726,7 +1923,7 @@ function DirectWorkCalendarView({ items, currentDate, setCurrentDate, onView }: 
                             key={item.id}
                             className="pointer-events-auto cursor-pointer text-[10px] flex items-center relative h-5 mx-0.5"
                             style={{ gridColumn: `${colStart} / span ${colSpan}` }}
-                            title={`${item.projectName} | ${item.manager} (${item.startDate} ~ ${item.endDate})`}
+                            title={`${item.projectName} | ${item.manager} (${item.startDate?.slice(5)} ~ ${item.endDate?.slice(5)})`}
                             onClick={() => onView(item)}
                           >
                             <div className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 opacity-60" style={{ backgroundColor: color }} />
@@ -1860,7 +2057,7 @@ function DashboardCalendarView({
                 showZones ? 'bg-white shadow-sm text-slate-700 border border-slate-200' : 'text-slate-400 hover:bg-white/50'
               }`}
             >
-              <span className={`w-2.5 h-2.5 rounded-full ${showZones ? 'bg-purple-500' : 'bg-slate-300'}`}></span>
+              <input type="checkbox" checked={showZones} readOnly className="pointer-events-none w-3.5 h-3.5 accent-purple-600" />
               작업실 사용현황
             </button>
             <button 
@@ -1869,7 +2066,7 @@ function DashboardCalendarView({
                 showWorks ? 'bg-white shadow-sm text-slate-700 border border-slate-200' : 'text-slate-400 hover:bg-white/50'
               }`}
             >
-              <span className={`w-2.5 h-2.5 rounded-full ${showWorks ? 'bg-blue-500' : 'bg-slate-300'}`}></span>
+              <input type="checkbox" checked={showWorks} readOnly className="pointer-events-none w-3.5 h-3.5 accent-blue-600" />
               LAB본부 직접 설치 작업
             </button>
           </div>
@@ -1950,7 +2147,7 @@ function DashboardCalendarView({
                             key={item.id}
                             className="pointer-events-auto cursor-pointer text-[10px] flex items-center relative h-5 mx-0.5 group"
                             style={{ gridColumn: `${colStart} / span ${colSpan}` }}
-                            title={`${item.title} (${item.startDate} ~ ${item.endDate})`}
+                            title={`${item.title} (${item.startDate?.slice(5)} ~ ${item.endDate?.slice(5)})`}
                             onClick={() => item.type === 'zone' ? onViewZone(item.original) : onViewWork(item.original)}
                           >
                             <div className="absolute top-1/2 left-0 right-0 h-[2px] -translate-y-1/2 opacity-60" style={{ backgroundColor: item.color }} />
@@ -1958,7 +2155,7 @@ function DashboardCalendarView({
                             {/* 항상 표시되는 플로팅 타이틀 (마우스 오버 시 표시) */}
                             <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                               {item.type === 'work' && <span className="bg-white text-blue-600 text-[8px] font-extrabold px-1 py-0.5 rounded mr-1">LAB</span>}
-                              {item.title} ({item.startDate} ~ {item.endDate})
+                              {item.title} ({item.startDate?.slice(5)} ~ {item.endDate?.slice(5)})
                               <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
                             </div>
                             {isAbsoluteStart && (
@@ -2063,14 +2260,20 @@ function DashboardView() {
   const todayStr = format(new Date(), 'yyyy-MM-dd')
 
   // --- 1. 작업실 사용 현황 통계 ---
-  // 예약 기간 내에 오늘이 포함되는 활성 구역 수 계산
-  const activeZonesToday = zones.filter(z => {
+  // 진행 중인 전체 작업 (종료되지 않은 작업)
+  const totalOngoingZones = zones.filter(z => !z.isFinished)
+
+  // 예약 기간 내에 오늘이 포함되는 활성 구역 수 계산 (종료된 작업 제외)
+  const activeZonesToday = totalOngoingZones.filter(z => {
     if (!z.startDate || !z.endDate) return false
     return z.startDate <= todayStr && z.endDate >= todayStr
   })
 
-  // 사용 중인 작업실 개수 계산
-  const workspacesInUseCount = new Set(activeZonesToday.map(z => z.workspaceId)).size
+  // 오늘부터 미래에 있는 전체 작업 건수
+  const futureZonesCount = zones.filter(z => z.endDate && z.endDate >= todayStr).length
+
+  // 사용 중인 작업실 개수 계산 (진행 중인 전체 작업 기준)
+  const workspacesInUseCount = new Set(totalOngoingZones.map(z => z.workspaceId)).size
 
   // 브랜드별 통계 (작업실 현황 기준)
   const zoneBrandCount: Record<string, number> = {}
@@ -2086,7 +2289,7 @@ function DashboardView() {
     return w.startDate <= todayStr && w.endDate >= todayStr
   })
 
-  // 전체 진행 중인 작업 (날짜 상관없이 isFinished가 아닌 작업)
+      // 전체 진행 중인 작업 (날짜 상관없이 isFinished가 아닌 작업)
   const totalOngoingWorks = overseasWorks.filter(w => !w.isFinished)
   const domesticWorksCount = totalOngoingWorks.filter(w => w.workType !== '해외').length
   const overseasWorksCount = totalOngoingWorks.filter(w => w.workType === '해외').length
@@ -2094,7 +2297,7 @@ function DashboardView() {
   // 앞으로 7일 이내에 시작하는 예정된 작업 (진행 중이 아닌 것 중에서)
   const next7DaysStr = format(addDays(new Date(), 7), 'yyyy-MM-dd')
   
-  const upcomingZones = zones.filter(z => {
+  const upcomingZones = totalOngoingZones.filter(z => {
     if (!z.startDate) return false
     return z.startDate > todayStr && z.startDate <= next7DaysStr
   }).map(z => ({ ...z, itemType: 'zone' as const }))
@@ -2107,7 +2310,8 @@ function DashboardView() {
   const upcomingAll = [...upcomingZones, ...upcomingOverseas].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
 
   // 앞으로 7일 이내에 종료 예정인 작업 (현재 진행 중인 작업 중)
-  const endingSoonZones = activeZonesToday.filter(z => {
+  const endingSoonZones = totalOngoingZones.filter(z => {
+    if (z.isFinished) return false
     if (!z.endDate) return false
     return z.endDate >= todayStr && z.endDate <= next7DaysStr
   }).map(z => ({ ...z, itemType: 'zone' as const }))
@@ -2130,16 +2334,20 @@ function DashboardView() {
             selectedView === 'activeZones' ? 'ring-2 ring-blue-500 border-blue-500' : 'border-slate-100 hover:shadow-md'
           }`}
         >
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-sm font-bold text-slate-500">작업실 사용현황 개요</p>
-              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{workspacesInUseCount} <span className="text-base font-medium text-slate-400">개 가동 중</span></h3>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-sm font-bold text-slate-500">작업실 사용현황</p>
+                <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{activeZonesToday.length} <span className="text-base font-medium text-slate-400">건 진행중</span></h3>
+              </div>
+              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
+                🏢
+              </div>
             </div>
-            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
-              🏢
-            </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs font-medium text-slate-500">오늘 <span className="font-bold text-slate-700">{activeZonesToday.length}</span>건</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-xs font-medium text-slate-500">예약된 작업 <span className="font-bold text-slate-700">{futureZonesCount}</span>건</span>
           </div>
-          <div className="text-xs text-slate-400">등록된 작업실 내 총 {activeZonesToday.length}개의 프로젝트 진행 중</div>
         </div>
 
         {/* 카드 2: 오늘 기준 진행 중인 LAB본부 작업 */}
@@ -2170,7 +2378,7 @@ function DashboardView() {
         >
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">LAB본부 직접 설치 작업</p>
+              <p className="text-sm font-bold text-slate-500">직접작업(LAB)</p>
               <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{totalOngoingWorks.length} <span className="text-base font-medium text-slate-400">건</span></h3>
             </div>
             <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 text-xl">
@@ -2208,7 +2416,7 @@ function DashboardView() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              {selectedView === 'activeZones' && <><span>🏢</span> 현재 사용 중인 작업 구역 상세</>}
+              {selectedView === 'activeZones' && <><span>🏢</span> 작업실 사용현황 상세</>}
               {selectedView === 'activeWorks' && <><span>🛠️</span> 오늘 출장/설치 진행 중 상세</>}
               {selectedView === 'totalOngoing' && <><span>🌍</span> LAB본부 직접 설치 작업 상세</>}
               {selectedView === 'calendar' && <><span>📅</span> 모든 작업 일정 Calendar</>}
@@ -2262,9 +2470,33 @@ function DashboardView() {
                           </div>
                           <div className="flex flex-col gap-1 text-xs text-slate-500">
                             <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
-                            <span className="text-blue-600 font-medium">
-                              {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
-                            </span>
+                            <div className="flex items-center justify-between mt-1">
+                              <span className="text-blue-600 font-medium whitespace-nowrap">
+                                {z.endDate === todayStr ? '오늘 종료' : `${z.startDate?.slice(5)} ~ ${z.endDate?.slice(5)}`}
+                              </span>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`'${z.project || z.name}' 작업을 종료하시겠습니까?`)) {
+                                    try {
+                                      const zoneRef = doc(db, 'zones', z.id);
+                                      await updateDoc(zoneRef, {
+                                        isFinished: !z.isFinished,
+                                        updatedAt: Date.now()
+                                      });
+                                    } catch (error) {
+                                      console.error("작업 종료 오류:", error);
+                                      alert("작업 종료 중 오류가 발생했습니다.");
+                                    }
+                                  }
+                                }}
+                                className={`rounded px-2 py-0.5 text-[10px] font-bold shadow-sm transition-colors ${
+                                  z.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+                                }`}
+                              >
+                                {z.isFinished ? '복구' : '종료'}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -2298,11 +2530,11 @@ function DashboardView() {
                       {w.projectName}
                     </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
-                    <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{w.location}</span></span>
-                    <span className="flex items-center gap-2">👤 <span className="truncate max-w-[100px]">{w.manager}</span></span>
-                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full shrink-0">
-                      {w.startDate} ~ {w.endDate}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500 shrink-0">
+                    <span className="flex items-center gap-2 w-[180px]">📍 <span className="truncate">{w.location}</span></span>
+                    <span className="flex items-center gap-2 w-[100px]">👤 <span className="truncate">{w.manager}</span></span>
+                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full shrink-0 w-[110px] text-center whitespace-nowrap">
+                      {w.startDate?.slice(5)} ~ {w.endDate?.slice(5)}
                     </span>
                   </div>
                 </div>
@@ -2366,13 +2598,13 @@ function DashboardView() {
                               {z.project || z.name || '-'}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0">
-                            {z.startDate} 시작
+                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                            {z.startDate?.slice(5)} 시작
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
-                          <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{cat?.name} {ws?.name}</span></span>
+                          <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{z.team || z.manager || z.name}</span></span>
                         </div>
                       </div>
                     )
@@ -2399,26 +2631,27 @@ function DashboardView() {
                               {w.projectName}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full shrink-0">
-                            {w.startDate} 시작
+                          <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                            {w.startDate?.slice(5)} 시작
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{w.location}</span></span>
+                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{w.location}</span></span>
+                          <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{w.manager}</span></span>
                         </div>
                       </div>
                     )
                   }
                 })}
-                {upcomingAll.length > 5 && (
+                {endingSoonAll.length > 5 && (
                   <div className="text-center text-xs text-slate-400 pt-2 font-medium">
-                    + {upcomingAll.length - 5}건의 예정된 일정이 더 있습니다.
+                    + {endingSoonAll.length - 5}건의 일정이 더 있습니다.
                   </div>
                 )}
               </div>
             ) : (
               <div className="h-full flex items-center justify-center text-slate-400 text-sm py-12">
-                7일 내 시작 예정인 일정이 없습니다.
+                7일 내 종료 예정인 일정이 없습니다.
               </div>
             )}
           </div>
@@ -2455,13 +2688,13 @@ function DashboardView() {
                               {z.project || z.name || '-'}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0">
-                            {z.endDate === todayStr ? '오늘 종료' : `${z.endDate} 종료`}
+                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                            {z.endDate === todayStr ? '오늘 종료' : `${z.endDate?.slice(5)} 종료`}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
-                          <span className="flex items-center gap-1">📍 <span className="truncate max-w-[120px]">{cat?.name} {ws?.name}</span></span>
-                          <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                          <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{cat?.name} {ws?.name}</span></span>
+                          <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{z.team || z.manager || z.name}</span></span>
                         </div>
                       </div>
                     )
@@ -2488,8 +2721,8 @@ function DashboardView() {
                               {w.projectName}
                             </span>
                           </div>
-                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0">
-                            {w.endDate === todayStr ? '오늘 종료' : `${w.endDate} 종료`}
+                          <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full shrink-0 whitespace-nowrap">
+                            {w.endDate === todayStr ? '오늘 종료' : `${w.endDate?.slice(5)} 종료`}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 mt-1.5">
@@ -3202,6 +3435,7 @@ function ZoneEditor({
 
   const filteredZones = useMemo(() => {
     return zones.filter(z => {
+      if (z.isFinished) return false // 종료된 작업은 표시하지 않음
       if (!filterStart && !filterEnd) return true
       const zs = z.startDate || ''
       const ze = z.endDate || ''

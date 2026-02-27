@@ -21,6 +21,7 @@ export interface Zone {
   endDate?: string;   // YYYY-MM-DD
   updatedAt: number; // epoch ms
   active: boolean;
+  isFinished?: boolean; // 작업 종료 여부
 }
 
 export interface Floor {

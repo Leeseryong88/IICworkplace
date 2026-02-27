@@ -88,19 +88,23 @@ export default function HomePage() {
   }, [activeWorkspace])
 
   const filteredZones = useMemo(() => {
+    // 종료된 작업은 우선 제외
+    const activeZones = zones.filter(z => !z.isFinished)
+
     if (!filterStartDate && !filterEndDate) {
-      const todayStr = format(new Date(), 'yyyy-MM-dd')
-      return zones.filter(z => !z.endDate || z.endDate >= todayStr)
+      // 모든 날짜 보기일 경우: 
+      // 이전의 "오늘 기준 지난 날짜 제외" 로직을 제거하고 종료되지 않은 모든 작업을 보여줍니다.
+      return activeZones
     }
-    return zones.filter((z) => {
-      // 기간이 설정되지 않은 구역은 제외할지 포함할지 결정 필요. 
-      // 여기서는 기간이 있는 구역만 필터링 대상이 된다고 가정.
+
+    return activeZones.filter((z) => {
+      // 기간이 설정되지 않은 구역은 제외
       if (!z.startDate || !z.endDate) return false 
       
       const start = filterStartDate || '0000-00-00'
       const end = filterEndDate || '9999-12-31'
       
-      // 오버랩 로직: (구역 시작일 <= 필터 종료일) AND (구역 종료일 >= 필터 시작일)
+      // 지정한 기간과 겹치는 작업 필터링
       return z.startDate <= end && z.endDate >= start
     })
   }, [zones, filterStartDate, filterEndDate])
@@ -326,7 +330,7 @@ function ZoneListView({
                 </td>
               )}
               <td className="px-6 py-4 text-slate-600">
-                {z.startDate || z.endDate ? `${z.startDate || ''} ~ ${z.endDate || ''}` : '-'}
+                {z.startDate || z.endDate ? `${z.startDate?.slice(5) || ''} ~ ${z.endDate?.slice(5) || ''}` : '-'}
               </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-2">
@@ -368,7 +372,7 @@ function FloorCanvas({ planUrl, zones }: { planUrl: string; zones: Zone[] }) {
       <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${size.w || 1000} ${size.h || 750}`} preserveAspectRatio="xMidYMid meet">
         {zones.map((z) => {
           const color = z.color || '#327fff'
-          const dateRange = z.startDate || z.endDate ? `${z.startDate || ''} ~ ${z.endDate || ''}` : ''
+          const dateRange = z.startDate || z.endDate ? `${z.startDate?.slice(5) || ''} ~ ${z.endDate?.slice(5) || ''}` : ''
           const title = `${z.project || z.name}${dateRange ? `\n${dateRange}` : ''}`
           if (z.rect) {
             const x = z.rect.x * (size.w || 1000)
@@ -448,7 +452,7 @@ function FloorCanvas({ planUrl, zones }: { planUrl: string; zones: Zone[] }) {
           </div>
           <div className="space-y-1 text-sm">
             {(selected.startDate || selected.endDate) && (
-              <div><span className="text-slate-500">기간</span>: {(selected.startDate || '')} ~ {(selected.endDate || '')}</div>
+              <div><span className="text-slate-500">기간</span>: {(selected.startDate?.slice(5) || '')} ~ {(selected.endDate?.slice(5) || '')}</div>
             )}
             {selected.team && <div><span className="text-slate-500">팀</span>: {selected.team}</div>}
             {selected.manager && <div><span className="text-slate-500">담당자</span>: {selected.manager}</div>}
