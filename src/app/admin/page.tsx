@@ -1835,6 +1835,9 @@ function DashboardView() {
     return z.startDate <= todayStr && z.endDate >= todayStr
   })
 
+  // 사용 중인 작업실 개수 계산
+  const workspacesInUseCount = new Set(activeZonesToday.map(z => z.workspaceId)).size
+
   // 브랜드별 통계 (작업실 현황 기준)
   const zoneBrandCount: Record<string, number> = {}
   activeZonesToday.forEach(z => {
@@ -1886,7 +1889,7 @@ function DashboardView() {
     <div className="p-6 bg-slate-50 min-h-full space-y-8">
       {/* 상단 요약 카드 섹션 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        {/* 카드 1: 오늘 기준 활성화된 작업실 예약 */}
+        {/* 카드 1: 작업실 사용현황 개요 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'activeZones' ? null : 'activeZones')}
           className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
@@ -1895,14 +1898,14 @@ function DashboardView() {
         >
           <div className="flex justify-between items-start mb-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">현재 사용 중인 작업 구역</p>
-              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{activeZonesToday.length} <span className="text-base font-medium text-slate-400">구역</span></h3>
+              <p className="text-sm font-bold text-slate-500">작업실 사용현황 개요</p>
+              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{workspacesInUseCount} <span className="text-base font-medium text-slate-400">개 가동 중</span></h3>
             </div>
             <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
               🏢
             </div>
           </div>
-          <div className="text-xs text-slate-400">오늘 날짜 기준 겹치는 예약 건수</div>
+          <div className="text-xs text-slate-400">등록된 작업실 내 총 {activeZonesToday.length}개의 프로젝트 진행 중</div>
         </div>
 
         {/* 카드 2: 오늘 기준 진행 중인 LAB본부 작업 */}
@@ -2005,36 +2008,57 @@ function DashboardView() {
           </div>
           
           <div className="flex flex-col space-y-3">
-            {selectedView === 'activeZones' && activeZonesToday.map(z => {
-              const ws = workspaces.find(w => w.id === z.workspaceId)
-              const cat = categories.find(c => c.id === ws?.categoryId)
-              return (
-                <div key={z.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <span 
-                      className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
-                      style={{ backgroundColor: z.color || '#327fff' }}
-                    >
-                      {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
-                    </span>
-                    <span 
-                      className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
-                      onClick={() => setViewingZone(z)}
-                    >
-                      {z.project || z.name || '-'}
-                    </span>
+            {selectedView === 'activeZones' && (() => {
+              const wsMap: Record<string, Zone[]> = {}
+              activeZonesToday.forEach(z => {
+                const wId = z.workspaceId || 'unknown'
+                if (!wsMap[wId]) wsMap[wId] = []
+                wsMap[wId].push(z)
+              })
+              
+              return Object.entries(wsMap).map(([wsId, wsZones]) => {
+                const ws = workspaces.find(w => w.id === wsId)
+                const cat = categories.find(c => c.id === ws?.categoryId)
+                return (
+                  <div key={wsId} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
+                      <span className="font-bold text-slate-800 text-base">
+                        {cat?.name} &gt; {ws?.name}
+                      </span>
+                      <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full">
+                        {wsZones.length}개 프로젝트
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {wsZones.map(z => (
+                        <div key={z.id} className="flex flex-col p-3 rounded-lg border border-slate-200 bg-white hover:border-blue-300 transition-colors">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span 
+                              className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white shrink-0"
+                              style={{ backgroundColor: z.color || '#327fff' }}
+                            >
+                              {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                            </span>
+                            <span 
+                              className="font-bold text-sm text-slate-800 cursor-pointer hover:text-brand-600 hover:underline truncate"
+                              onClick={() => setViewingZone(z)}
+                            >
+                              {z.project || z.name || '-'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-1 text-xs text-slate-500">
+                            <span className="flex items-center gap-1">👤 {z.team || z.manager || z.name}</span>
+                            <span className="text-blue-600 font-medium">
+                              {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
-                    <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{cat?.name} {ws?.name}</span></span>
-                    <span className="flex items-center gap-2">👤 {z.team || z.manager || z.name}</span>
-                    {z.purpose && <span className="flex items-center gap-2">📝 <span className="truncate max-w-[150px]">{z.purpose}</span></span>}
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full shrink-0">
-                      {z.endDate === todayStr ? '오늘 종료' : `${z.startDate} ~ ${z.endDate}`}
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })
+            })()}
 
             {(selectedView === 'activeWorks' || selectedView === 'totalOngoing') && (() => {
               const list = selectedView === 'activeWorks' ? activeWorksToday : totalOngoingWorks
