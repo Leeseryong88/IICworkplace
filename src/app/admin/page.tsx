@@ -1781,7 +1781,7 @@ function DashboardView() {
   const [categories, setCategories] = useState<Category[]>([])
   const [overseasWorks, setOverseasWorks] = useState<OverseasWork[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedView, setSelectedView] = useState<'activeZones' | 'activeWorks' | 'totalOngoing' | 'upcoming' | null>(null)
+  const [selectedView, setSelectedView] = useState<'activeZones' | 'activeWorks' | 'totalOngoing' | 'upcoming' | 'endingSoon' | null>(null)
   const [viewingZone, setViewingZone] = useState<Zone | null>(null)
   const [viewingWork, setViewingWork] = useState<OverseasWork | null>(null)
 
@@ -1869,10 +1869,23 @@ function DashboardView() {
 
   const upcomingAll = [...upcomingZones, ...upcomingOverseas].sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''))
 
+  // 앞으로 7일 이내에 종료 예정인 작업 (현재 진행 중인 작업 중)
+  const endingSoonZones = activeZonesToday.filter(z => {
+    if (!z.endDate) return false
+    return z.endDate >= todayStr && z.endDate <= next7DaysStr
+  }).map(z => ({ ...z, itemType: 'zone' as const }))
+
+  const endingSoonWorks = activeWorksToday.filter(w => {
+    if (!w.endDate) return false
+    return w.endDate >= todayStr && w.endDate <= next7DaysStr
+  }).map(w => ({ ...w, itemType: 'work' as const }))
+
+  const endingSoonAll = [...endingSoonZones, ...endingSoonWorks].sort((a, b) => (a.endDate || '').localeCompare(b.endDate || ''))
+
   return (
     <div className="p-6 bg-slate-50 min-h-full space-y-8">
       {/* 상단 요약 카드 섹션 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {/* 카드 1: 오늘 기준 활성화된 작업실 예약 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'activeZones' ? null : 'activeZones')}
@@ -1951,6 +1964,25 @@ function DashboardView() {
           </div>
           <div className="text-xs text-slate-400">일정이 곧 시작되는 설치 작업 건수</div>
         </div>
+
+        {/* 카드 5: 7일 내 종료 예정 작업 */}
+        <div 
+          onClick={() => setSelectedView(prev => prev === 'endingSoon' ? null : 'endingSoon')}
+          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+            selectedView === 'endingSoon' ? 'ring-2 ring-red-500 border-red-500' : 'border-slate-100 hover:shadow-md'
+          }`}
+        >
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <p className="text-sm font-bold text-slate-500">7일 내 종료 예정 작업</p>
+              <h3 className="text-3xl font-extrabold text-red-600 mt-1">{endingSoonAll.length} <span className="text-base font-medium text-red-400">건</span></h3>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 text-xl">
+              🏁
+            </div>
+          </div>
+          <div className="text-xs text-slate-400">곧 종료될 예정인 작업 및 예약</div>
+        </div>
       </div>
 
       {/* 선택된 요약 카드 상세 내용 */}
@@ -1962,6 +1994,7 @@ function DashboardView() {
               {selectedView === 'activeWorks' && <><span>🛠️</span> 오늘 출장/설치 진행 중 상세</>}
               {selectedView === 'totalOngoing' && <><span>🌍</span> LAB본부 직접 설치 작업 상세</>}
               {selectedView === 'upcoming' && <><span>⏰</span> 7일 내 시작 예정 작업 상세</>}
+              {selectedView === 'endingSoon' && <><span>🏁</span> 7일 내 종료 예정 작업 상세</>}
             </h3>
             <button 
               onClick={() => setSelectedView(null)}
@@ -2102,6 +2135,71 @@ function DashboardView() {
                 )
               }
             })}
+
+            {selectedView === 'endingSoon' && endingSoonAll.map((item, idx) => {
+              if (item.itemType === 'zone') {
+                const z = item as (Zone & {itemType: 'zone'})
+                const ws = workspaces.find(w => w.id === z.workspaceId)
+                const cat = categories.find(c => c.id === ws?.categoryId)
+                return (
+                  <div key={`zone-${z.id}-${idx}`} className="p-4 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-1 rounded text-xs font-bold bg-purple-100 text-purple-700 shrink-0">작업실</span>
+                      <span 
+                        className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                        style={{ backgroundColor: z.color || '#327fff' }}
+                      >
+                        {BRAND_CONFIG[z.brand || '']?.name || z.brand || '-'}
+                      </span>
+                      <span 
+                        className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                        onClick={() => setViewingZone(z)}
+                      >
+                        {z.project || z.name || '-'}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                      <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{cat?.name} {ws?.name}</span></span>
+                      <span className="flex items-center gap-2">👤 {z.team || z.manager || z.name}</span>
+                      <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full shrink-0">
+                        {z.endDate === todayStr ? '오늘 종료' : `${z.endDate} 종료`}
+                      </span>
+                    </div>
+                  </div>
+                )
+              } else {
+                const w = item as (OverseasWork & {itemType: 'work'})
+                return (
+                  <div key={`work-${w.id}-${idx}`} className="p-4 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="px-2 py-1 rounded text-xs font-bold bg-brand-100 text-brand-700 shrink-0">설치작업</span>
+                      <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                        {w.workType || '국내'}
+                      </span>
+                      <span 
+                        className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                        style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
+                      >
+                        {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
+                      </span>
+                      <span 
+                        className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                        onClick={() => setViewingWork(w)}
+                      >
+                        {w.projectName}
+                      </span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500">
+                      <span className="flex items-center gap-2">📍 <span className="truncate max-w-[150px]">{w.location}</span></span>
+                      <span className="flex items-center gap-2">👤 <span className="truncate max-w-[100px]">{w.manager}</span></span>
+                      <span className="text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-full shrink-0">
+                        {w.endDate === todayStr ? '오늘 종료' : `${w.endDate} 종료`}
+                      </span>
+                    </div>
+                  </div>
+                )
+              }
+            })}
           </div>
 
           {/* Empty States */}
@@ -2116,6 +2214,9 @@ function DashboardView() {
           )}
           {selectedView === 'upcoming' && upcomingAll.length === 0 && (
             <div className="py-16 text-center text-slate-400">7일 내 시작 예정인 일정이 없습니다.</div>
+          )}
+          {selectedView === 'endingSoon' && endingSoonAll.length === 0 && (
+            <div className="py-16 text-center text-slate-400">7일 내 종료 예정인 일정이 없습니다.</div>
           )}
         </div>
       )}
@@ -2268,6 +2369,7 @@ function DashboardView() {
         <ZoneViewModal 
           zone={viewingZone} 
           workspace={workspaces.find(w => w.id === viewingZone.workspaceId)}
+          category={categories.find(c => c.id === workspaces.find(w => w.id === viewingZone.workspaceId)?.categoryId)}
           onClose={() => setViewingZone(null)} 
           onEdit={() => {}} // 대시보드에서는 편집 기능 미지원
         />
