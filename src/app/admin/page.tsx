@@ -287,7 +287,7 @@ export default function AdminPage() {
   )
 }
 
-function AllZonesList({ zones: propZones, openZoneEditor, showFinished }: { zones?: Zone[], openZoneEditor: (cid: string, wid: string, zid?: string) => void, showFinished: boolean }) {
+function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }: { zones?: Zone[], openZoneEditor: (cid: string, wid: string, zid?: string) => void, showFinished?: boolean }) {
   const [zones, setZones] = useState<Zone[]>(propZones || [])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -788,7 +788,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView, 
   )
 }
 
-function OverseasWorkList({ showFinished }: { showFinished: boolean }) {
+function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) {
   const [items, setItems] = useState<OverseasWork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -3028,6 +3028,7 @@ function WorkspacesOverview({
       const results: Record<string, Zone[]> = {}
       snap.forEach((d) => {
         const z = { id: d.id, ...(d.data() as any) } as Zone
+        if (z.isFinished) return // 종료된 작업 제외
         if (z.workspaceId) {
           if (!results[z.workspaceId]) results[z.workspaceId] = []
           results[z.workspaceId].push(z)
