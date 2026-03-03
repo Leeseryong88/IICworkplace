@@ -161,24 +161,12 @@ export default function AdminPage() {
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[calc(100vh-200px)]">
           {activeTab === 'dashboard' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-lg sm:text-xl">📊</span> 대시보드
-                </h2>
-                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">모든 작업과 일정을 한눈에 파악할 수 있는 종합 대시보드입니다.</p>
-              </div>
               <DashboardView />
             </div>
           )}
 
           {activeTab === 'workspaces' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-lg sm:text-xl">🏢</span> 작업실 관리
-                </h2>
-                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">카테고리를 생성하고 도면 및 예약 구역을 설정합니다.</p>
-              </div>
               <WorkspacesOverview
                 selectedCategoryId={selectedCategoryId}
                 setSelectedCategoryId={setSelectedCategoryId}
@@ -202,30 +190,9 @@ export default function AdminPage() {
 
           {activeTab === 'all-zones' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-                <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                      <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-lg sm:text-xl">📋</span> 작업실 사용 현황
-                      </h2>
-                      <button 
-                        onClick={() => setShowFinishedZones(!showFinishedZones)}
-                        className={`rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm w-fit ${
-                          showFinishedZones 
-                            ? 'bg-slate-800 text-white border-slate-800' 
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {showFinishedZones ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-slate-500 ml-6 sm:ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
-                </div>
-              </div>
               <AllZonesList 
                 showFinished={showFinishedZones}
+                setShowFinishedZones={setShowFinishedZones}
                 openZoneEditor={(cid: string, wid: string, zid?: string) => { 
                   setSelectedCategoryId(cid); 
                   setSelectedWorkspaceId(wid); 
@@ -241,40 +208,15 @@ export default function AdminPage() {
 
           {activeTab === 'overseas-work' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-                <div className="flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
-                      <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-                        <span className="text-lg sm:text-xl">🛠️</span> LAB본부 직접 설치 작업
-                      </h2>
-                      <button 
-                        onClick={() => setShowFinishedWorks(!showFinishedWorks)}
-                        className={`rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm w-fit ${
-                          showFinishedWorks 
-                            ? 'bg-slate-800 text-white border-slate-800' 
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                      >
-                        {showFinishedWorks ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
-                </div>
-              </div>
-              <OverseasWorkList showFinished={showFinishedWorks} />
+              <OverseasWorkList 
+                showFinished={showFinishedWorks} 
+                setShowFinishedWorks={setShowFinishedWorks}
+              />
             </div>
           )}
 
           {activeTab === 'sidebar-settings' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
-                  <span className="text-lg sm:text-xl">⚙️</span> 사이드바 설정
-                </h2>
-                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">메인 페이지 사이드바에 노출할 카테고리와 순서를 구성합니다.</p>
-              </div>
               <SidebarSettings />
             </div>
           )}
@@ -307,11 +249,11 @@ export default function AdminPage() {
   )
 }
 
-function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }: { zones?: Zone[], openZoneEditor: (cid: string, wid: string, zid?: string) => void, showFinished?: boolean }) {
-  const [zones, setZones] = useState<Zone[]>(propZones || [])
+function AllZonesList({ showFinished, setShowFinishedZones, openZoneEditor }: { showFinished: boolean, setShowFinishedZones: (val: boolean) => void, openZoneEditor: (cid: string, wid: string, zid?: string) => void }) {
+  const [zones, setZones] = useState<Zone[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(!propZones)
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
@@ -321,17 +263,12 @@ function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }
 
   useEffect(() => {
     setCurrentDate(new Date())
-    // prop으로 zones를 받지 않은 경우에만 구독
-    const unsubZones = !propZones ? onSnapshot(query(collection(db, 'zones'), orderBy('updatedAt', 'desc')), (snap) => {
+    const unsubZones = onSnapshot(query(collection(db, 'zones'), orderBy('updatedAt', 'desc')), (snap) => {
       const list: Zone[] = []
       snap.forEach(d => list.push({ id: d.id, ...d.data() } as Zone))
       setZones(list)
-    }) : undefined;
+    })
     
-    // propZones가 변경되면 로컬 상태 업데이트
-    if (propZones) {
-      setZones(propZones);
-    }
     const unsubWs = onSnapshot(collection(db, 'workspaces'), (snap) => {
       const list: Workspace[] = []
       snap.forEach(d => list.push({ id: d.id, ...d.data() } as Workspace))
@@ -345,11 +282,11 @@ function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }
     })
 
     return () => { 
-      if (unsubZones) unsubZones(); 
+      unsubZones(); 
       unsubWs(); 
       unsubCats(); 
     }
-  }, [propZones])
+  }, [])
 
   const filteredZones = useMemo(() => {
     const filtered = zones.filter(z => {
@@ -407,7 +344,8 @@ function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }
             />
           </div>
           
-          <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
+          {/* 상단 필터 영역 - 데스크톱 */}
+          <div className="hidden sm:flex flex-wrap items-center gap-1.5 border-l pl-4">
             <span className="text-xs font-semibold text-slate-400 mr-1">브랜드:</span>
             {Object.entries(BRAND_CONFIG).map(([key, cfg]) => {
               const isSelected = selectedBrands.includes(key);
@@ -440,7 +378,19 @@ function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }
             )}
           </div>
         </div>
+        
         <div className="flex items-center gap-2">
+          {/* 종료된 작업 보기 버튼 위치 이동 */}
+          <button 
+            onClick={() => setShowFinishedZones(!showFinished)}
+            className={`rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm ${
+              showFinished 
+                ? 'bg-slate-800 text-white border-slate-800' 
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {showFinished ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
+          </button>
           <div className="flex items-center rounded-lg border bg-slate-50 p-1">
             <button 
               onClick={() => setViewMode('list')}
@@ -808,7 +758,7 @@ function CalendarView({ zones, currentDate, setCurrentDate, workspaces, onView, 
   )
 }
 
-function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) {
+function OverseasWorkList({ showFinished, setShowFinishedWorks }: { showFinished: boolean, setShowFinishedWorks: (val: boolean) => void }) {
   const [items, setItems] = useState<OverseasWork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -959,7 +909,7 @@ function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) 
             />
           </div>
           
-          <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
+          <div className="hidden sm:flex flex-wrap items-center gap-1.5 border-l pl-4">
             <span className="text-xs font-semibold text-slate-400 mr-1">브랜드:</span>
             {Object.entries(BRAND_CONFIG).filter(([key]) => key !== 'LAB').map(([key, cfg]) => {
               const isSelected = selectedBrands.includes(key);
@@ -984,7 +934,7 @@ function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) 
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 border-l pl-4">
+          <div className="hidden sm:flex flex-wrap items-center gap-1.5 border-l pl-4">
             <span className="text-xs font-semibold text-slate-400 mr-1">지역:</span>
             {['국내', '해외'].map((type) => {
               const isSelected = selectedWorkTypes.includes(type);
@@ -1008,7 +958,17 @@ function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) 
             })}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto justify-end sm:justify-start">
+          <button 
+            onClick={() => setShowFinishedWorks(!showFinished)}
+            className={`rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm ${
+              showFinished 
+                ? 'bg-slate-800 text-white border-slate-800' 
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {showFinished ? '🔙 진행 중인 작업 보기' : '✅ 종료된 작업 보기'}
+          </button>
           <div className="flex items-center rounded-lg border bg-slate-50 p-1">
             <button 
               onClick={() => setViewMode('list')}
