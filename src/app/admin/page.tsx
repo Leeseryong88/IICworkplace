@@ -111,8 +111,28 @@ export default function AdminPage() {
             </div>
           </div>
 
-          {/* 상단 탭 (탑바) */}
-          <nav className="flex space-x-1 sm:space-x-8 -mb-px">
+          {/* 모바일 뷰: 상단 탭 드롭다운 */}
+          <div className="sm:hidden py-3">
+            <div className="relative">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value as any)}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-4 pr-10 text-sm font-bold text-slate-800 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="dashboard">📊 대시보드</option>
+                <option value="workspaces">🏢 작업실 관리</option>
+                <option value="all-zones">📋 작업실 사용 현황</option>
+                <option value="overseas-work">🛠️ LAB본부 직접 설치 작업</option>
+                <option value="sidebar-settings">⚙️ 사이드바 설정</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                <span className="text-xs">▼</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 데스크톱 뷰: 상단 탭 (탑바) */}
+          <nav className="hidden sm:flex space-x-2 sm:space-x-8 -mb-px overflow-x-auto whitespace-nowrap scrollbar-hide pb-1">
             {[
               { id: 'dashboard', label: '📊 대시보드', icon: '📊' },
               { id: 'workspaces', label: '🏢 작업실 관리', icon: '🏢' },
@@ -123,7 +143,7 @@ export default function AdminPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`group flex items-center gap-2 py-4 px-1 border-b-2 font-bold text-sm transition-all duration-200 ${
+                className={`group flex items-center gap-2 py-3 sm:py-4 px-1 border-b-2 font-bold text-xs sm:text-sm transition-all duration-200 shrink-0 ${
                   activeTab === tab.id
                     ? 'border-brand-600 text-brand-700'
                     : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'
@@ -137,15 +157,15 @@ export default function AdminPage() {
       </div>
 
       {/* 메인 컨텐츠 영역 */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6">
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[calc(100vh-200px)]">
           {activeTab === 'dashboard' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-6 py-4 border-b">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">📊</span> 대시보드
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-xl">📊</span> 대시보드
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">모든 작업과 일정을 한눈에 파악할 수 있는 종합 대시보드입니다.</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">모든 작업과 일정을 한눈에 파악할 수 있는 종합 대시보드입니다.</p>
               </div>
               <DashboardView />
             </div>
@@ -153,11 +173,11 @@ export default function AdminPage() {
 
           {activeTab === 'workspaces' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-6 py-4 border-b">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">🏢</span> 작업실 관리
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-xl">🏢</span> 작업실 관리
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">카테고리를 생성하고 도면 및 예약 구역을 설정합니다.</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">카테고리를 생성하고 도면 및 예약 구역을 설정합니다.</p>
               </div>
               <WorkspacesOverview
                 selectedCategoryId={selectedCategoryId}
@@ -182,16 +202,16 @@ export default function AdminPage() {
 
           {activeTab === 'all-zones' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-6 py-4 border-b">
-                <div className="flex flex-col gap-2">
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <span className="text-xl">📋</span> 작업실 사용 현황
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-lg sm:text-xl">📋</span> 작업실 사용 현황
                       </h2>
                       <button 
                         onClick={() => setShowFinishedZones(!showFinishedZones)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
+                        className={`rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm w-fit ${
                           showFinishedZones 
                             ? 'bg-slate-800 text-white border-slate-800' 
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -201,7 +221,7 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 ml-6 sm:ml-8">모든 작업실의 예약 현황을 통합 목록과 달력으로 확인합니다.</p>
                 </div>
               </div>
               <AllZonesList 
@@ -221,16 +241,16 @@ export default function AdminPage() {
 
           {activeTab === 'overseas-work' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-6 py-4 border-b">
-                <div className="flex flex-col gap-2">
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+                <div className="flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <span className="text-xl">🛠️</span> LAB본부 직접 설치 작업
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-lg sm:text-xl">🛠️</span> LAB본부 직접 설치 작업
                       </h2>
                       <button 
                         onClick={() => setShowFinishedWorks(!showFinishedWorks)}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all border shadow-sm ${
+                        className={`rounded-lg px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all border shadow-sm w-fit ${
                           showFinishedWorks 
                             ? 'bg-slate-800 text-white border-slate-800' 
                             : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
@@ -240,7 +260,7 @@ export default function AdminPage() {
                       </button>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5 ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">직접 설치 작업 현황 및 출장 계획을 관리합니다.</p>
                 </div>
               </div>
               <OverseasWorkList showFinished={showFinishedWorks} />
@@ -249,11 +269,11 @@ export default function AdminPage() {
 
           {activeTab === 'sidebar-settings' && (
             <div className="animate-in fade-in duration-300">
-              <div className="bg-slate-50 px-6 py-4 border-b">
-                <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <span className="text-xl">⚙️</span> 사이드바 설정
+              <div className="bg-slate-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+                <h2 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
+                  <span className="text-lg sm:text-xl">⚙️</span> 사이드바 설정
                 </h2>
-                <p className="text-xs text-slate-500 mt-0.5 ml-8">메인 페이지 사이드바에 노출할 카테고리와 순서를 구성합니다.</p>
+                <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5 ml-6 sm:ml-8">메인 페이지 사이드바에 노출할 카테고리와 순서를 구성합니다.</p>
               </div>
               <SidebarSettings />
             </div>
@@ -439,8 +459,8 @@ function AllZonesList({ zones: propZones, openZoneEditor, showFinished = false }
       </div>
 
       {viewMode === 'list' ? (
-        <div className="rounded border bg-white overflow-hidden">
-          <table className="w-full text-left table-fixed">
+        <div className="rounded border bg-white overflow-x-auto">
+          <table className="w-full text-left table-fixed min-w-[800px]">
             <thead className="bg-slate-50 text-slate-600 font-medium text-[clamp(11px,1vw+2px,13px)]">
               <tr>
                 <th className="px-3 py-2 border-b whitespace-nowrap w-[25%]">프로젝트명</th>
@@ -1013,8 +1033,8 @@ function OverseasWorkList({ showFinished = false }: { showFinished?: boolean }) 
       </div>
 
       {viewMode === 'list' ? (
-        <div className="rounded border bg-white overflow-hidden">
-          <table className="overseas-work-table w-full text-left table-fixed">
+        <div className="rounded border bg-white overflow-x-auto">
+          <table className="overseas-work-table w-full text-left table-fixed min-w-[800px]">
             <thead className="bg-slate-50 text-slate-600 font-medium">
               <tr>
                 <th className="px-2 py-2 border-b whitespace-nowrap w-[5%]">지역</th>
@@ -2324,98 +2344,98 @@ function DashboardView() {
   const endingSoonAll = [...endingSoonZones, ...endingSoonWorks].sort((a, b) => (a.endDate || '').localeCompare(b.endDate || ''))
 
   return (
-    <div className="p-6 bg-slate-50 min-h-full space-y-8">
+    <div className="p-3 sm:p-6 bg-slate-50 min-h-full space-y-4 sm:space-y-8">
       {/* 상단 요약 카드 섹션 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-3 sm:gap-6 pb-2 scrollbar-hide sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:overflow-visible sm:pb-0">
         {/* 카드 1: 작업실 사용현황 개요 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'activeZones' ? null : 'activeZones')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+          className={`min-w-[85vw] sm:min-w-0 shrink-0 snap-center bg-white rounded-2xl p-4 sm:p-6 shadow-sm border cursor-pointer transition-all ${
             selectedView === 'activeZones' ? 'ring-2 ring-blue-500 border-blue-500' : 'border-slate-100 hover:shadow-md'
           }`}
         >
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-2 sm:mb-4">
               <div>
-                <p className="text-sm font-bold text-slate-500">작업실 사용현황</p>
-                <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{activeZonesToday.length} <span className="text-base font-medium text-slate-400">건 진행중</span></h3>
+                <p className="text-xs sm:text-sm font-bold text-slate-500">작업실 사용현황</p>
+                <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">{activeZonesToday.length} <span className="text-sm sm:text-base font-medium text-slate-400">건 진행중</span></h3>
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-xl">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 text-lg sm:text-xl shrink-0">
                 🏢
               </div>
             </div>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs font-medium text-slate-500">오늘 <span className="font-bold text-slate-700">{activeZonesToday.length}</span>건</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 mt-1">
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500">오늘 <span className="font-bold text-slate-700">{activeZonesToday.length}</span>건</span>
             <span className="text-slate-300">|</span>
-            <span className="text-xs font-medium text-slate-500">예약된 작업 <span className="font-bold text-slate-700">{futureZonesCount}</span>건</span>
+            <span className="text-[11px] sm:text-xs font-medium text-slate-500">예약된 작업 <span className="font-bold text-slate-700">{futureZonesCount}</span>건</span>
           </div>
         </div>
 
         {/* 카드 2: 오늘 기준 진행 중인 LAB본부 작업 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'activeWorks' ? null : 'activeWorks')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+          className={`min-w-[85vw] sm:min-w-0 shrink-0 snap-center bg-white rounded-2xl p-4 sm:p-6 shadow-sm border cursor-pointer transition-all ${
             selectedView === 'activeWorks' ? 'ring-2 ring-brand-500 border-brand-500' : 'border-slate-100 hover:shadow-md'
           }`}
         >
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-2 sm:mb-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">오늘 출장/설치 진행 중</p>
-              <h3 className="text-3xl font-extrabold text-brand-600 mt-1">{activeWorksToday.length} <span className="text-base font-medium text-brand-400">건</span></h3>
+              <p className="text-xs sm:text-sm font-bold text-slate-500">오늘 출장/설치 진행 중</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-brand-600 mt-1">{activeWorksToday.length} <span className="text-sm sm:text-base font-medium text-brand-400">건</span></h3>
             </div>
-            <div className="h-10 w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 text-xl">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 text-lg sm:text-xl shrink-0">
               🛠️
             </div>
           </div>
-          <div className="text-xs text-slate-400">오늘 날짜 포함된 전체 작업</div>
+          <div className="text-[11px] sm:text-xs text-slate-400">오늘 날짜 포함된 전체 작업</div>
         </div>
 
         {/* 카드 3: 전체 진행 중 (국내/해외 비중) */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'totalOngoing' ? null : 'totalOngoing')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+          className={`min-w-[85vw] sm:min-w-0 shrink-0 snap-center bg-white rounded-2xl p-4 sm:p-6 shadow-sm border cursor-pointer transition-all ${
             selectedView === 'totalOngoing' ? 'ring-2 ring-orange-500 border-orange-500' : 'border-slate-100 hover:shadow-md'
           }`}
         >
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-2 sm:mb-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">직접작업(LAB)</p>
-              <h3 className="text-3xl font-extrabold text-slate-800 mt-1">{totalOngoingWorks.length} <span className="text-base font-medium text-slate-400">건</span></h3>
+              <p className="text-xs sm:text-sm font-bold text-slate-500">직접작업(LAB)</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-800 mt-1">{totalOngoingWorks.length} <span className="text-sm sm:text-base font-medium text-slate-400">건</span></h3>
             </div>
-            <div className="h-10 w-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 text-xl">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 text-lg sm:text-xl shrink-0">
               🌍
             </div>
           </div>
-          <div className="flex items-center gap-4 text-xs font-bold">
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-blue-400"></span> 국내 {domesticWorksCount}건</span>
-            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-orange-400"></span> 해외 {overseasWorksCount}건</span>
+          <div className="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-xs font-bold">
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-400"></span> 국내 {domesticWorksCount}건</span>
+            <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-400"></span> 해외 {overseasWorksCount}건</span>
           </div>
         </div>
 
         {/* 카드 4: 전체 일정 캘린더 */}
         <div 
           onClick={() => setSelectedView(prev => prev === 'calendar' ? null : 'calendar')}
-          className={`bg-white rounded-2xl p-6 shadow-sm border cursor-pointer transition-all ${
+          className={`min-w-[85vw] sm:min-w-0 shrink-0 snap-center bg-white rounded-2xl p-4 sm:p-6 shadow-sm border cursor-pointer transition-all ${
             selectedView === 'calendar' ? 'ring-2 ring-purple-500 border-purple-500' : 'border-slate-100 hover:shadow-md'
           }`}
         >
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex justify-between items-start mb-2 sm:mb-4">
             <div>
-              <p className="text-sm font-bold text-slate-500">모든 작업 일정</p>
-              <h3 className="text-3xl font-extrabold text-purple-600 mt-1">Calendar</h3>
+              <p className="text-xs sm:text-sm font-bold text-slate-500">모든 작업 일정</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-purple-600 mt-1">Calendar</h3>
             </div>
-            <div className="h-10 w-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 text-xl">
+            <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600 text-lg sm:text-xl shrink-0">
               📅
             </div>
           </div>
-          <div className="text-xs text-slate-400">작업실 및 설치 일정을 달력으로 보기</div>
+          <div className="text-[11px] sm:text-xs text-slate-400">작업실 및 설치 일정을 달력으로 보기</div>
         </div>
       </div>
 
       {/* 선택된 요약 카드 상세 내용 */}
       {selectedView && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-1.5 sm:gap-2">
               {selectedView === 'activeZones' && <><span>🏢</span> 작업실 사용현황 상세</>}
               {selectedView === 'activeWorks' && <><span>🛠️</span> 오늘 출장/설치 진행 중 상세</>}
               {selectedView === 'totalOngoing' && <><span>🌍</span> LAB본부 직접 설치 작업 상세</>}
@@ -2423,7 +2443,7 @@ function DashboardView() {
             </h3>
             <button 
               onClick={() => setSelectedView(null)}
-              className="text-slate-400 hover:text-slate-600 font-bold px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-sm transition-colors"
+              className="text-slate-400 hover:text-slate-600 font-bold px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs sm:text-sm transition-colors"
             >
               닫기 ✕
             </button>
@@ -2442,16 +2462,16 @@ function DashboardView() {
                 const ws = workspaces.find(w => w.id === wsId)
                 const cat = categories.find(c => c.id === ws?.categoryId)
                 return (
-                  <div key={wsId} className="p-4 rounded-xl border border-slate-100 bg-slate-50/50">
-                    <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-2">
-                      <span className="font-bold text-slate-800 text-base">
+                  <div key={wsId} className="p-3 sm:p-4 rounded-xl border border-slate-100 bg-slate-50/50">
+                    <div className="flex items-center justify-between mb-2 sm:mb-3 border-b border-slate-200 pb-1.5 sm:pb-2">
+                      <span className="font-bold text-slate-800 text-sm sm:text-base">
                         {cat?.name} &gt; {ws?.name}
                       </span>
-                      <span className="text-xs font-bold text-blue-600 bg-blue-100 px-2.5 py-1 rounded-full">
+                      <span className="text-[10px] sm:text-xs font-bold text-blue-600 bg-blue-100 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full">
                         {wsZones.length}개 프로젝트
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3">
                       {wsZones.map(z => (
                         <div key={z.id} className="flex flex-col p-3 rounded-lg border border-slate-200 bg-white hover:border-blue-300 transition-colors">
                           <div className="flex items-center gap-2 mb-2">
@@ -2509,31 +2529,31 @@ function DashboardView() {
             {(selectedView === 'activeWorks' || selectedView === 'totalOngoing') && (() => {
               const list = selectedView === 'activeWorks' ? activeWorksToday : totalOngoingWorks
               return list.map(w => (
-                <div key={w.id} className="p-4 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                <div key={w.id} className="p-3 sm:p-4 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group flex flex-col lg:flex-row justify-between lg:items-center gap-3 sm:gap-4">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
+                    <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-bold shrink-0 ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                       {w.workType || '국내'}
                     </span>
-                    <span className={`px-2 py-1 rounded text-xs font-bold shrink-0 ${w.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-xs font-bold shrink-0 ${w.status === '확정' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                       {w.status || '예정'}
                     </span>
                     <span 
-                      className="inline-block px-2 py-1 rounded-full text-xs font-bold text-white shrink-0"
+                      className="inline-block px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold text-white shrink-0"
                       style={{ backgroundColor: BRAND_CONFIG[w.brand]?.color || '#327fff' }}
                     >
                       {BRAND_CONFIG[w.brand]?.name || w.brand || '-'}
                     </span>
                     <span 
-                      className="font-bold text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline"
+                      className="font-bold text-sm sm:text-base text-slate-800 cursor-pointer hover:text-brand-600 hover:underline mt-1 sm:mt-0 w-full sm:w-auto"
                       onClick={() => setViewingWork(w)}
                     >
                       {w.projectName}
                     </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-slate-500 shrink-0">
-                    <span className="flex items-center gap-2 w-[180px]">📍 <span className="truncate">{w.location}</span></span>
-                    <span className="flex items-center gap-2 w-[100px]">👤 <span className="truncate">{w.manager}</span></span>
-                    <span className="text-xs font-bold text-brand-600 bg-brand-50 px-3 py-1.5 rounded-full shrink-0 w-[110px] text-center whitespace-nowrap">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-6 text-xs sm:text-sm text-slate-500 shrink-0 bg-slate-50 lg:bg-transparent p-2 lg:p-0 rounded-lg lg:rounded-none">
+                    <span className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-[180px]">📍 <span className="truncate">{w.location}</span></span>
+                    <span className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-[100px]">👤 <span className="truncate">{w.manager}</span></span>
+                    <span className="text-[10px] sm:text-xs font-bold text-brand-600 bg-brand-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full shrink-0 lg:w-[110px] text-center whitespace-nowrap self-start sm:self-auto">
                       {w.startDate?.slice(5)} ~ {w.endDate?.slice(5)}
                     </span>
                   </div>
@@ -2582,8 +2602,8 @@ function DashboardView() {
                     const cat = categories.find(c => c.id === ws?.categoryId)
                     return (
                       <div key={`zone-${z.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-colors group">
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-start sm:items-center mb-1.5 flex-col sm:flex-row gap-2 sm:gap-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">작업실</span>
                             <span 
                               className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
@@ -2602,7 +2622,7 @@ function DashboardView() {
                             {z.startDate?.slice(5)} 시작
                           </span>
                         </div>
-                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                        <div className="flex flex-col sm:grid sm:grid-cols-[140px_1fr] gap-1 sm:gap-2 text-[11px] sm:text-xs text-slate-500 mt-1.5">
                           <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{cat?.name} {ws?.name}</span></span>
                           <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{z.team || z.manager || z.name}</span></span>
                         </div>
@@ -2612,8 +2632,8 @@ function DashboardView() {
                     const w = item as (OverseasWork & {itemType: 'work'})
                     return (
                       <div key={`work-${w.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-brand-200 hover:bg-brand-50/30 transition-colors group">
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-start sm:items-center mb-1.5 flex-col sm:flex-row gap-2 sm:gap-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-700">설치작업</span>
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                               {w.workType || '국내'}
@@ -2635,7 +2655,7 @@ function DashboardView() {
                             {w.startDate?.slice(5)} 시작
                           </span>
                         </div>
-                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                        <div className="flex flex-col sm:grid sm:grid-cols-[140px_1fr] gap-1 sm:gap-2 text-[11px] sm:text-xs text-slate-500 mt-1.5">
                           <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{w.location}</span></span>
                           <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{w.manager}</span></span>
                         </div>
@@ -2672,8 +2692,8 @@ function DashboardView() {
                     const cat = categories.find(c => c.id === ws?.categoryId)
                     return (
                       <div key={`zone-${z.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group">
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-start sm:items-center mb-1.5 flex-col sm:flex-row gap-2 sm:gap-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-700">작업실</span>
                             <span 
                               className="inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold text-white"
@@ -2692,7 +2712,7 @@ function DashboardView() {
                             {z.endDate === todayStr ? '오늘 종료' : `${z.endDate?.slice(5)} 종료`}
                           </span>
                         </div>
-                        <div className="grid grid-cols-[140px_1fr] gap-2 text-xs text-slate-500 mt-1.5">
+                        <div className="flex flex-col sm:grid sm:grid-cols-[140px_1fr] gap-1 sm:gap-2 text-[11px] sm:text-xs text-slate-500 mt-1.5">
                           <span className="flex items-center gap-1 min-w-0">📍 <span className="truncate">{cat?.name} {ws?.name}</span></span>
                           <span className="flex items-center gap-1 min-w-0">👤 <span className="truncate">{z.team || z.manager || z.name}</span></span>
                         </div>
@@ -2702,8 +2722,8 @@ function DashboardView() {
                     const w = item as (OverseasWork & {itemType: 'work'})
                     return (
                       <div key={`work-${w.id}-${idx}`} className="p-3 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50/30 transition-colors group">
-                        <div className="flex justify-between items-center mb-1">
-                          <div className="flex items-center gap-2">
+                        <div className="flex justify-between items-start sm:items-center mb-1.5 flex-col sm:flex-row gap-2 sm:gap-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-100 text-brand-700">설치작업</span>
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${w.workType === '해외' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
                               {w.workType || '국내'}
