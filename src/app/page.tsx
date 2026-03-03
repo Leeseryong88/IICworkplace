@@ -20,6 +20,7 @@ export default function HomePage() {
   const [filterEndDate, setFilterEndDate] = useState<string>('')
   const [allowedCategoryIds, setAllowedCategoryIds] = useState<string[] | null>(null)
   const [sidebarOrder, setSidebarOrder] = useState<string[] | null>(null)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [openCats, setOpenCats] = useState<Record<string, boolean>>({})
   const [checkedZoneIds, setCheckedZoneIds] = useState<Set<string>>(new Set())
 
@@ -35,11 +36,6 @@ export default function HomePage() {
       const list: Category[] = []
       snap.forEach((d) => list.push({ id: d.id, ...(d.data() as any) }))
       setCategories(list)
-      if (list.length && !activeCategory) {
-        const vis = (allowedCategoryIds && allowedCategoryIds.length) ? list.filter(c => allowedCategoryIds.includes(c.id)) : list
-        const ordered = sidebarOrder && sidebarOrder.length ? [...vis].sort((a,b)=> (sidebarOrder.indexOf(a.id)+1||9999) - (sidebarOrder.indexOf(b.id)+1||9999)) : vis
-        if (ordered.length) setActiveCategory(ordered[0].id)
-      }
     })
     const unsubSettings = onSnapshot(doc(db, 'settings', 'sidebar'), (d) => {
       const data = d.exists() ? (d.data() as any) : null
@@ -47,6 +43,7 @@ export default function HomePage() {
       const ord = (data?.order as string[] | undefined) || null
       setAllowedCategoryIds(ids && ids.length ? ids : null)
       setSidebarOrder(ord && ord.length ? ord : null)
+      setSettingsLoaded(true)
     })
     return () => { unsubCats(); unsubSettings() }
   }, [])
@@ -57,11 +54,6 @@ export default function HomePage() {
       const list: Workspace[] = []
       snap.forEach((d) => list.push({ id: d.id, ...(d.data() as any) }))
       setWorkspaces(list)
-      // 초기 선택: 현재 카테고리에 속한 첫 작업실 또는 전체 첫 작업실
-      if (!activeWorkspace && list.length) {
-        const firstInCat = list.find((w) => w.categoryId === activeCategory)
-        setActiveWorkspace(firstInCat ? firstInCat.id : list[0].id)
-      }
     })
     return () => unsub()
   }, [])
@@ -131,33 +123,90 @@ export default function HomePage() {
 
   const activeWs = workspaces.find((w) => w.id === activeWorkspace)
 
+  const orderedCategories = useMemo(() => {
+    const base = (allowedCategoryIds && allowedCategoryIds.length ? categories.filter(c => allowedCategoryIds.includes(c.id)) : categories)
+    if (!sidebarOrder || sidebarOrder.length === 0) return base
+    const pos = (id: string) => {
+      const i = sidebarOrder.indexOf(id)
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i
+    }
+    return [...base].sort((a, b) => pos(a.id) - pos(b.id))
+  }, [categories, allowedCategoryIds, sidebarOrder])
+
+  // 초기 로딩 시 정렬된 첫 번째 카테고리와 해당 카테고리의 첫 작업실을 기본으로 선택
+  useEffect(() => {
+    if (settingsLoaded && orderedCategories.length > 0 && workspaces.length > 0 && !activeCategory) {
+      const firstCatId = orderedCategories[0].id
+      setActiveCategory(firstCatId)
+      
+      const firstWs = workspaces.find((w) => w.categoryId === firstCatId)
+      if (firstWs && !activeWorkspace) {
+        setActiveWorkspace(firstWs.id)
+      }
+    }
+  }, [settingsLoaded, orderedCategories, workspaces, activeCategory, activeWorkspace])
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between border-b pb-2 gap-2">
+    <div className="flex flex-col gap-3 sm:gap-4">
+      <div className="flex items-center justify-between border-b pb-2 gap-2 px-1 sm:px-0">
         <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-slate-900 truncate">IIC작업실</h1>
         <Link href="/admin" className="shrink-0 text-xs md:text-sm font-medium text-brand-700 hover:text-brand-800 hover:underline">관리자 모드</Link>
       </div>
 
       {/* 본문 레이아웃: 사이드바 + 캔버스 */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        {/* 사이드바: 모바일에서는 상단에, 데스크톱에서는 좌측에 배치 */}
-        <aside className="lg:col-span-3 rounded-lg border bg-white p-3">
-            <h2 className="mb-2 text-base font-semibold">카테고리 및 작업실</h2>
-            <div className="space-y-2 max-h-[300px] overflow-y-auto lg:max-h-none">
-              {(() => {
-                const base = (allowedCategoryIds && allowedCategoryIds.length ? categories.filter(c => allowedCategoryIds.includes(c.id)) : categories)
-                if (!sidebarOrder || sidebarOrder.length === 0) return base
-                const pos = (id: string) => {
-                  const i = sidebarOrder.indexOf(id)
-                  return i === -1 ? Number.MAX_SAFE_INTEGER : i
-                }
-                return [...base].sort((a, b) => pos(a.id) - pos(b.id))
-              })().map((c) => {
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-12">
+        {/* 모바일 뷰: 카테고리 & 작업실 가로 스크롤 탭 */}
+        <div className="lg:hidden flex flex-col gap-1.5 sm:gap-2 rounded-lg border bg-white p-2 sm:p-3">
+          <div className="flex overflow-x-auto gap-1.5 sm:gap-2 pb-1.5 sm:pb-2 border-b border-slate-100" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {orderedCategories.map((c) => (
+              <button
+                key={c.id}
+                className={`shrink-0 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold transition-all whitespace-nowrap border-2 ${
+                  activeCategory === c.id 
+                    ? 'border-slate-800 bg-slate-800 text-white shadow-sm' 
+                    : 'border-transparent bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+                onClick={() => {
+                  setActiveCategory(c.id);
+                  const firstWorkspace = workspaces.find(w => w.categoryId === c.id);
+                  if (firstWorkspace) setActiveWorkspace(firstWorkspace.id);
+                }}
+              >
+                {c.name}
+              </button>
+            ))}
+            {orderedCategories.length === 0 && <div className="text-xs sm:text-sm text-slate-500 py-1 sm:py-1.5">카테고리 없음</div>}
+          </div>
+          <div className="flex overflow-x-auto gap-1.5 sm:gap-2 pt-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {workspaces.filter(w => w.categoryId === activeCategory).map((w) => (
+              <button
+                key={w.id}
+                className={`shrink-0 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[11px] sm:text-xs font-bold transition-all border whitespace-nowrap ${
+                  activeWorkspace === w.id 
+                    ? 'border-brand-500 bg-brand-50 text-brand-700 shadow-sm' 
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+                onClick={() => setActiveWorkspace(w.id)}
+              >
+                {w.name}
+              </button>
+            ))}
+            {workspaces.filter((w) => w.categoryId === activeCategory).length === 0 && (
+              <div className="px-2 py-1 text-[11px] sm:text-xs text-slate-400">작업실이 없습니다.</div>
+            )}
+          </div>
+        </div>
+
+        {/* 데스크톱 뷰: 좌측 사이드바 아코디언 */}
+        <aside className="hidden lg:block lg:col-span-3 rounded-lg border bg-white p-3">
+            <h2 className="mb-3 text-base font-bold text-slate-800 flex items-center gap-2"><span>📂</span> 카테고리 및 작업실</h2>
+            <div className="space-y-2 max-h-[calc(100vh-200px)] overflow-y-auto">
+              {orderedCategories.map((c) => {
                 const open = true
                 return (
                   <div key={c.id} className="rounded border">
                     <button
-                      className={`flex w-full items-center justify-between px-3 py-3 text-left text-sm font-medium transition-colors ${open ? 'bg-slate-50 text-brand-700' : 'text-slate-700'}`}
+                      className={`flex w-full items-center justify-between px-3 py-3 text-left text-sm font-bold transition-colors ${open ? 'bg-slate-50 text-brand-700' : 'text-slate-700 hover:bg-slate-50'}`}
                       onClick={() => { setActiveCategory(c.id) }}
                     >
                       <span>{c.name}</span>
@@ -170,14 +219,14 @@ export default function HomePage() {
                           .map((w) => (
                             <button
                               key={w.id}
-                              className={`mb-1 block w-full rounded px-3 py-2 text-left text-sm transition-colors ${activeWorkspace === w.id ? 'bg-brand-600 text-white shadow-sm' : 'hover:bg-slate-50 text-slate-700'}`}
+                              className={`mb-1 block w-full rounded px-3 py-2 text-left text-sm transition-colors ${activeWorkspace === w.id ? 'bg-brand-600 text-white shadow-sm font-medium' : 'hover:bg-slate-50 text-slate-600'}`}
                               onClick={() => setActiveWorkspace(w.id)}
                             >
                               {w.name}
                             </button>
                           ))}
                         {workspaces.filter((w) => w.categoryId === c.id).length === 0 && (
-                          <div className="px-2 py-1 text-xs text-slate-500">작업실 없음</div>
+                          <div className="px-2 py-1 text-xs text-slate-400">작업실 없음</div>
                         )}
                       </div>
                     )}
@@ -190,10 +239,10 @@ export default function HomePage() {
         {/* 메인 캔버스 */}
         <div className="lg:col-span-9 space-y-4">
           <div className="rounded-lg border bg-white p-3 shadow-sm">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">🗓️ 사용 가능 여부 확인:</span>
-                <div className="relative w-full sm:w-auto">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4 flex-1">
+                <span className="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">🗓️ 사용 가능 여부 확인:</span>
+                <div className="relative w-full sm:w-auto flex-1">
                   <DatePicker
                     selectsRange={true}
                     startDate={filterStartDate ? parseISO(filterStartDate) : null}
@@ -208,25 +257,25 @@ export default function HomePage() {
                     isClearable={false}
                     placeholderText="날짜 범위를 선택하세요"
                     customInput={
-                      <button className="flex w-full items-center justify-between gap-2 rounded border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all shadow-sm sm:min-w-[200px]">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <span className="text-lg">📅</span>
-                          <span className="font-medium">
+                      <button className="flex w-full items-center justify-between gap-2 rounded border border-slate-300 bg-white px-2 sm:px-3 py-1.5 text-xs sm:text-sm hover:bg-slate-50 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 outline-none transition-all shadow-sm sm:min-w-[200px]">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-slate-700 min-w-0">
+                          <span className="text-base sm:text-lg shrink-0">📅</span>
+                          <span className="font-medium truncate text-left">
                             {filterStartDate ? (
-                              filterEndDate ? `${filterStartDate} ~ ${filterEndDate}` : `${filterStartDate} ~ 선택 중...`
+                              filterEndDate ? `${filterStartDate.slice(5)} ~ ${filterEndDate.slice(5)}` : `${filterStartDate.slice(5)} ~ 선택 중...`
                             ) : '모든 날짜'}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400">▼</span>
+                        <span className="text-[10px] text-slate-400 shrink-0">▼</span>
                       </button>
                     }
                   />
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-2">
                 {(filterStartDate !== format(new Date(), 'yyyy-MM-dd') || filterEndDate !== format(new Date(), 'yyyy-MM-dd')) && (
                   <button 
-                    className="flex-1 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-brand-600 sm:flex-none"
+                    className="flex-1 rounded-md border border-slate-200 bg-white px-2 py-1.5 text-[11px] sm:text-xs font-medium text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:text-brand-600 sm:flex-none whitespace-nowrap"
                     onClick={() => { 
                       const today = format(new Date(), 'yyyy-MM-dd');
                       setFilterStartDate(today); 
@@ -238,7 +287,7 @@ export default function HomePage() {
                 )}
                 {(filterStartDate || filterEndDate) && (
                   <button 
-                    className="flex-1 rounded-md border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:text-brand-800 sm:flex-none"
+                    className="flex-1 rounded-md border border-brand-200 bg-brand-50 px-2 py-1.5 text-[11px] sm:text-xs font-semibold text-brand-700 shadow-sm transition-all hover:bg-brand-100 hover:text-brand-800 sm:flex-none whitespace-nowrap"
                     onClick={() => { 
                       setFilterStartDate(''); 
                       setFilterEndDate('');
@@ -251,7 +300,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative min-h-[500px] w-full overflow-hidden rounded-lg border bg-white shadow-md">
+          <div className="relative min-h-[300px] sm:min-h-[400px] md:min-h-[500px] w-full overflow-hidden rounded-lg border bg-white shadow-sm sm:shadow-md">
             {activeWs?.planUrl ? (
               <FloorCanvas planUrl={activeWs.planUrl} zones={displayZones} />
             ) : (
@@ -298,54 +347,54 @@ function ZoneListView({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
-        <thead className="sticky top-0 bg-slate-50 text-slate-600 shadow-sm">
-          <tr>
-            {onToggleZone && (
-              <th className="px-4 py-4 w-10">
-                <div className="flex justify-center">
-                  {/* 전체 선택 기능은 일단 생략하거나 간단히 구현 가능 */}
-                </div>
-              </th>
-            )}
-            <th className="px-6 py-4 font-semibold">기간</th>
-            <th className="px-6 py-4 font-semibold">프로젝트명</th>
-            <th className="px-6 py-4 font-semibold">담당자</th>
-            <th className="px-6 py-4 font-semibold">비고</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {zones.map((z) => (
-            <tr key={z.id} className="hover:bg-slate-50 transition-colors">
-              {onToggleZone && (
-                <td className="px-4 py-4">
-                  <div className="flex justify-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-                      checked={checkedZoneIds?.has(z.id) ?? true}
-                      onChange={() => onToggleZone(z.id)}
-                    />
-                  </div>
-                </td>
-              )}
-              <td className="px-6 py-4 text-slate-600">
-                {z.startDate || z.endDate ? `${z.startDate?.slice(5) || ''} ~ ${z.endDate?.slice(5) || ''}` : '-'}
-              </td>
-              <td className="px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: z.color || '#327fff' }} />
-                  <span className="font-medium text-slate-900">{z.project || z.name}</span>
-                </div>
-              </td>
-              <td className="px-6 py-4 text-slate-700">{z.manager || '-'}</td>
-              <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate" title={z.note || z.purpose}>
-                {z.note || z.purpose || '-'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead className="sticky top-0 bg-slate-50 text-slate-600 shadow-sm">
+              <tr>
+                {onToggleZone && (
+                  <th className="px-2 sm:px-4 py-3 sm:py-4 w-8">
+                    <div className="flex justify-center">
+                      {/* 전체 선택 기능은 일단 생략하거나 간단히 구현 가능 */}
+                    </div>
+                  </th>
+                )}
+                <th className="px-2 sm:px-6 py-3 sm:py-4 font-semibold whitespace-nowrap">기간</th>
+                <th className="px-2 sm:px-6 py-3 sm:py-4 font-semibold whitespace-nowrap min-w-[100px]">프로젝트명</th>
+                <th className="px-2 sm:px-6 py-3 sm:py-4 font-semibold whitespace-nowrap">담당자</th>
+                <th className="px-2 sm:px-6 py-3 sm:py-4 font-semibold whitespace-nowrap hidden sm:table-cell">비고</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {zones.map((z) => (
+                <tr key={z.id} className="hover:bg-slate-50 transition-colors">
+                  {onToggleZone && (
+                    <td className="px-2 sm:px-4 py-3 sm:py-4">
+                      <div className="flex justify-center">
+                        <input
+                          type="checkbox"
+                          className="h-3.5 w-3.5 sm:h-4 sm:w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                          checked={checkedZoneIds?.has(z.id) ?? true}
+                          onChange={() => onToggleZone(z.id)}
+                        />
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-2 sm:px-6 py-3 sm:py-4 text-slate-600 whitespace-nowrap">
+                    {z.startDate || z.endDate ? `${z.startDate?.slice(5) || ''} ~ ${z.endDate?.slice(5) || ''}` : '-'}
+                  </td>
+                  <td className="px-2 sm:px-6 py-3 sm:py-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 sm:h-3 sm:w-3 shrink-0 rounded-full shadow-sm" style={{ backgroundColor: z.color || '#327fff' }} />
+                      <span className="font-medium text-slate-900 break-keep">{z.project || z.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-2 sm:px-6 py-3 sm:py-4 text-slate-700 whitespace-nowrap">{z.manager || '-'}</td>
+                  <td className="px-2 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-xs text-slate-500 max-w-[100px] sm:max-w-xs truncate hidden sm:table-cell" title={z.note || z.purpose}>
+                    {z.note || z.purpose || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
     </div>
   )
 }
