@@ -1444,7 +1444,7 @@ function OverseasWorkModal({ item, onClose, onSave }: { item: Partial<OverseasWo
   )
 }
 
-function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Zone, workspace?: Workspace, category?: Category, onClose: () => void, onEdit: (zid?: string) => void }) {
+function ZoneViewModal({ zone, workspace, category, onClose, onEdit, onDelete }: { zone: Zone, workspace?: Workspace, category?: Category, onClose: () => void, onEdit: (zid?: string) => void, onDelete: () => void }) {
   const [imgNatural, setImgNatural] = useState({ w: 1000, h: 1000 })
   const planUrl = workspace?.planUrl
 
@@ -1490,6 +1490,12 @@ function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Z
               className="rounded-lg bg-brand-50 px-3 py-1.5 text-sm font-bold text-brand-700 hover:bg-brand-100 transition-colors"
             >
               편집
+            </button>
+            <button 
+              onClick={onDelete}
+              className="rounded-lg bg-red-50 px-3 py-1.5 text-sm font-bold text-red-700 hover:bg-red-100 transition-colors"
+            >
+              삭제
             </button>
             <button onClick={onClose} className="ml-2 text-slate-400 hover:text-slate-600 text-xl">✕</button>
           </div>
@@ -2705,6 +2711,17 @@ function DashboardView({ openZoneEditor }: { openZoneEditor: (cid: string, wid: 
             if (ws) {
               openZoneEditor(ws.categoryId, ws.id, viewingZone.id);
               setViewingZone(null);
+            }
+          }}
+          onDelete={async () => {
+            if (confirm('정말 삭제하시겠습니까?')) {
+              try {
+                await deleteDoc(doc(db, 'zones', viewingZone.id));
+                setViewingZone(null);
+              } catch (e) {
+                console.error(e);
+                alert('삭제 중 오류가 발생했습니다.');
+              }
             }
           }}
         />
