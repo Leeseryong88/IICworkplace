@@ -3751,10 +3751,6 @@ function ZoneEditor({
                                   isFinished: !z.isFinished,
                                   updatedAt: Date.now()
                                 });
-                                // 만약 현재 편집 중인 구역이라면 편집 상태도 업데이트
-                                if (editing?.id === z.id) {
-                                  setEditing({ ...editing, isFinished: !z.isFinished });
-                                }
                               } catch (error) {
                                 console.error(`작업 ${action} 오류:`, error);
                                 alert(`작업 상태 변경 중 오류가 발생했습니다.`);
@@ -3765,24 +3761,7 @@ function ZoneEditor({
                           {z.isFinished ? '복구' : '종료'}
                         </button>
                         <button className="rounded border bg-white px-2 py-0.5 hover:bg-slate-50" onClick={() => setEditing({ ...z })}>편집</button>
-                        <button 
-                          className="rounded border bg-white px-2 py-0.5 text-red-600 hover:bg-red-50" 
-                          onClick={async () => {
-                            if (confirm('정말 삭제하시겠습니까?')) {
-                              try {
-                                await deleteDoc(doc(db, 'zones', z.id));
-                                if (editing?.id === z.id) {
-                                  setEditing(null);
-                                }
-                              } catch (e) {
-                                console.error(e);
-                                alert('삭제 중 오류가 발생했습니다.');
-                              }
-                            }
-                          }}
-                        >
-                          삭제
-                        </button>
+                        <button className="rounded border bg-white px-2 py-0.5 text-red-600 hover:bg-red-50" onClick={() => removeZone(z.id)}>삭제</button>
                       </div>
                     </div>
                     <div className="mt-1 flex flex-col gap-0.5 ml-12">
