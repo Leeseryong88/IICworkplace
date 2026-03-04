@@ -161,7 +161,17 @@ export default function AdminPage() {
         <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[calc(100vh-200px)]">
           {activeTab === 'dashboard' && (
             <div className="animate-in fade-in duration-300">
-              <DashboardView />
+              <DashboardView 
+                openZoneEditor={(cid: string, wid: string, zid?: string) => { 
+                  setSelectedCategoryId(cid); 
+                  setSelectedWorkspaceId(wid); 
+                  if(zid) { 
+                    setZoneEditor({ isOpen: true, categoryId: cid, workspaceId: wid, zoneId: zid }) 
+                  } else { 
+                    setZoneModalOpen(true) 
+                  } 
+                }}
+              />
             </div>
           )}
 
@@ -1583,29 +1593,7 @@ function ZoneViewModal({ zone, workspace, category, onClose, onEdit }: { zone: Z
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-4 flex justify-between items-center">
-          <button
-            onClick={async () => {
-              if (confirm(`'${zone.project || zone.name}' 작업을 종료하시겠습니까?`)) {
-                try {
-                  const zoneRef = doc(db, 'zones', zone.id);
-                  await updateDoc(zoneRef, {
-                    isFinished: !zone.isFinished,
-                    updatedAt: Date.now()
-                  });
-                  onClose();
-                } catch (error) {
-                  console.error("작업 종료 오류:", error);
-                  alert("작업 종료 중 오류가 발생했습니다.");
-                }
-              }
-            }}
-            className={`rounded-lg px-6 py-2.5 text-sm font-bold shadow-md transition-colors ${
-              zone.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
-            }`}
-          >
-            {zone.isFinished ? '작업 복구' : '작업 종료'}
-          </button>
+        <div className="mt-8 border-t pt-4 flex justify-end items-center">
           <button 
             onClick={onClose}
             className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
@@ -1736,29 +1724,7 @@ function WorkViewModal({ item, onClose, onEdit, onDelete }: { item: OverseasWork
           </div>
         </div>
 
-        <div className="mt-8 border-t pt-4 flex justify-between items-center">
-          <button
-            onClick={async () => {
-              if (confirm(`'${item.projectName}' 작업을 종료하시겠습니까?`)) {
-                try {
-                  const workRef = doc(db, 'overseas_work', item.id);
-                  await updateDoc(workRef, {
-                    isFinished: !item.isFinished,
-                    updatedAt: Date.now()
-                  });
-                  onClose();
-                } catch (error) {
-                  console.error("작업 종료 오류:", error);
-                  alert("작업 종료 중 오류가 발생했습니다.");
-                }
-              }
-            }}
-            className={`rounded-lg px-6 py-2.5 text-sm font-bold shadow-md transition-colors ${
-              item.isFinished ? 'bg-slate-400 text-white hover:bg-slate-500' : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
-            }`}
-          >
-            {item.isFinished ? '작업 복구' : '작업 종료'}
-          </button>
+        <div className="mt-8 border-t pt-4 flex justify-end items-center">
           <button 
             onClick={onClose}
             className="rounded-lg bg-slate-800 px-8 py-2.5 text-sm font-bold text-white hover:bg-slate-900 transition-colors shadow-md"
@@ -2185,7 +2151,7 @@ function DashboardCalendarView({
   )
 }
 
-function DashboardView() {
+function DashboardView({ openZoneEditor }: { openZoneEditor: (cid: string, wid: string, zid?: string) => void }) {
   const [zones, setZones] = useState<Zone[]>([])
   const [workspaces, setWorkspaces] = useState<Workspace[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -2194,6 +2160,7 @@ function DashboardView() {
   const [selectedView, setSelectedView] = useState<'activeZones' | 'activeWorks' | 'totalOngoing' | 'calendar' | null>(null)
   const [viewingZone, setViewingZone] = useState<Zone | null>(null)
   const [viewingWork, setViewingWork] = useState<OverseasWork | null>(null)
+  const [editingWork, setEditingWork] = useState<Partial<OverseasWork> | null>(null)
   const [calendarDate, setCalendarDate] = useState<Date>(new Date())
 
   useEffect(() => {
@@ -2733,7 +2700,13 @@ function DashboardView() {
           workspace={workspaces.find(w => w.id === viewingZone.workspaceId)}
           category={categories.find(c => c.id === workspaces.find(w => w.id === viewingZone.workspaceId)?.categoryId)}
           onClose={() => setViewingZone(null)} 
-          onEdit={() => {}} // 대시보드에서는 편집 기능 미지원
+          onEdit={() => {
+            const ws = workspaces.find(w => w.id === viewingZone.workspaceId);
+            if (ws) {
+              openZoneEditor(ws.categoryId, ws.id, viewingZone.id);
+              setViewingZone(null);
+            }
+          }}
         />
       )}
 
@@ -2741,8 +2714,47 @@ function DashboardView() {
         <WorkViewModal 
           item={viewingWork} 
           onClose={() => setViewingWork(null)} 
-          onEdit={() => {}} // 대시보드에서는 편집 기능 미지원
-          onDelete={() => {}} // 대시보드에서는 삭제 기능 미지원
+          onEdit={() => {
+            const item = viewingWork;
+            setViewingWork(null);
+            setEditingWork(item);
+          }}
+          onDelete={async () => {
+            if (viewingWork.id && confirm('정말 삭제하시겠습니까?')) {
+              try {
+                await deleteDoc(doc(db, 'overseas_work', viewingWork.id));
+                setViewingWork(null);
+              } catch (e) {
+                console.error(e);
+                alert('삭제 중 오류가 발생했습니다.');
+              }
+            }
+          }}
+        />
+      )}
+
+      {editingWork && (
+        <OverseasWorkModal 
+          item={editingWork} 
+          onClose={() => setEditingWork(null)} 
+          onSave={async (data) => {
+            try {
+              const payload = {
+                ...data,
+                updatedAt: Date.now()
+              }
+              if (data.id) {
+                const { id, ...rest } = payload
+                await updateDoc(doc(db, 'overseas_work', id!), rest)
+              } else {
+                await addDoc(collection(db, 'overseas_work'), payload)
+              }
+              setEditingWork(null)
+            } catch (e) {
+              console.error(e)
+              alert('저장 중 오류가 발생했습니다.')
+            }
+          }} 
         />
       )}
     </div>
