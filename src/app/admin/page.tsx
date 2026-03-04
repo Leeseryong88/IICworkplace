@@ -563,6 +563,17 @@ function AllZonesList({ showFinished, setShowFinishedZones, openZoneEditor }: { 
               openZoneEditor(ws.categoryId, ws.id, zid)
             }
           }}
+          onDelete={async () => {
+            if (confirm('정말 삭제하시겠습니까?')) {
+              try {
+                await deleteDoc(doc(db, 'zones', viewingZone.id));
+                setViewingZone(null);
+              } catch (e) {
+                console.error(e);
+                alert('삭제 중 오류가 발생했습니다.');
+              }
+            }
+          }}
         />
       )}
     </div>
