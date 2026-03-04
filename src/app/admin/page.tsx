@@ -457,12 +457,32 @@ function AllZonesList({ showFinished, setShowFinishedZones, openZoneEditor }: { 
                         >
                           {z.project || z.name || '-'}
                         </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); ws && openZoneEditor(ws.categoryId, ws.id) }}
-                          className="opacity-0 group-hover:opacity-100 rounded border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700 hover:bg-brand-100 transition-all shrink-0"
-                        >
-                          편집
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); ws && openZoneEditor(ws.categoryId, ws.id, z.id) }}
+                            className="rounded border border-brand-200 bg-brand-50 px-1.5 py-0.5 text-[10px] text-brand-700 hover:bg-brand-100 transition-all"
+                            title="수정"
+                          >
+                            편집
+                          </button>
+                          <button 
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (confirm('정말 삭제하시겠습니까?')) {
+                                try {
+                                  await deleteDoc(doc(db, 'zones', z.id));
+                                } catch (error) {
+                                  console.error("삭제 중 오류:", error);
+                                  alert("삭제 중 오류가 발생했습니다.");
+                                }
+                              }
+                            }}
+                            className="rounded border border-red-200 bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700 hover:bg-red-100 transition-all"
+                            title="삭제"
+                          >
+                            삭제
+                          </button>
+                        </div>
                       </div>
                     </td>
                     <td className="px-2 py-3 whitespace-nowrap text-center">
