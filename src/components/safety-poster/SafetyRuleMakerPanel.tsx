@@ -41,6 +41,10 @@ export function SafetyRuleMakerPanel() {
   const [content, setContent] = useState<PosterContent>(() => clonePosterContent(INITIAL_POSTER_CONTENT))
   const [docName, setDocName] = useState('새 안전수칙')
   const [currentId, setCurrentId] = useState<string | null>(null)
+  /** true: 미리보기 표시 (목록에서 선택했거나, 새 문서를 첫 저장한 직후) */
+  const [showPreview, setShowPreview] = useState(false)
+  /** 새로 만들기 직후 ~ 첫 저장 전 */
+  const [isDraftMode, setIsDraftMode] = useState(false)
   const [savedList, setSavedList] = useState<SafetyPosterRecord[]>([])
   const [listLoading, setListLoading] = useState(true)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
@@ -78,12 +82,16 @@ export function SafetyRuleMakerPanel() {
     setCurrentId(null)
     setContent(clonePosterContent(INITIAL_POSTER_CONTENT))
     setDocName('새 안전수칙')
+    setShowPreview(false)
+    setIsDraftMode(true)
   }
 
   const loadPoster = (item: SafetyPosterRecord) => {
     setCurrentId(item.id)
     setDocName(item.name)
     setContent(clonePosterContent(item.content))
+    setShowPreview(true)
+    setIsDraftMode(false)
   }
 
   const handleSave = async () => {
@@ -104,6 +112,8 @@ export function SafetyRuleMakerPanel() {
           createdAt: serverTimestamp(),
         })
         setCurrentId(ref.id)
+        setIsDraftMode(false)
+        setShowPreview(true)
       }
     } catch (e) {
       console.error(e)
@@ -113,21 +123,30 @@ export function SafetyRuleMakerPanel() {
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
     if (!window.confirm('이 항목을 삭제할까요?')) return
     setError(null)
     try {
       await deleteDoc(doc(db, 'safety_posters', id))
       if (currentId === id) {
-        newDraft()
+        setCurrentId(null)
+        setContent(clonePosterContent(INITIAL_POSTER_CONTENT))
+        setDocName('새 안전수칙')
+        setShowPreview(false)
+        setIsDraftMode(false)
       }
-    } catch (e) {
-      console.error(e)
+    } catch (err) {
+      console.error(err)
       setError('삭제에 실패했습니다.')
     }
   }
 
   const handleExportPdf = async () => {
+    if (!showPreview) {
+      setError('미리보기가 켜진 뒤에 PDF로 내보낼 수 있습니다. (저장하거나 목록에서 선택하세요.)')
+      return
+    }
     const element = document.getElementById('safety-poster')
     if (!element) return
 
@@ -164,54 +183,21 @@ export function SafetyRuleMakerPanel() {
 
   return (
     <div className="min-h-[calc(100vh-200px)] flex flex-col bg-[#F2F2F2]">
-      <div className="p-4 sm:p-6 border-b border-slate-200 bg-white/80 space-y-4">
-        <div>
-          <h2 className="text-lg font-bold text-slate-800">안전수칙 포스터</h2>
-          <p className="text-sm text-slate-500 mt-1">
-            편집 후 Firestore에 저장해 두었다가 다시 불러와 수정할 수 있습니다.
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
-          <div className="flex-1 min-w-[200px]">
-            <label className="block text-xs font-semibold text-slate-600 mb-1">문서 이름</label>
-            <input
-              type="text"
-              value={docName}
-              onChange={(e) => setDocName(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
-              placeholder="예: 5층 실험실 안전수칙"
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 text-white px-4 py-2 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              {currentId ? '저장(업데이트)' : '새로 저장'}
-            </button>
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col max-h-80 lg:max-h-none">
+          <div className="p-3 border-b border-slate-100 flex items-center justify-between gap-2">
+            <div className="font-semibold text-slate-800 text-sm flex items-center gap-2 min-w-0">
+              <FolderOpen className="w-4 h-4 text-slate-500 shrink-0" />
+              <span className="truncate">저장된 안전수칙</span>
+            </div>
             <button
               type="button"
               onClick={newDraft}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
-              <FilePlus className="w-4 h-4" />
+              <FilePlus className="w-3.5 h-3.5" />
               새로 만들기
             </button>
-            {currentId && (
-              <span className="self-center text-xs text-slate-500">불러온 문서: 편집 후 다시 저장하면 업데이트됩니다.</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col max-h-80 lg:max-h-none">
-          <div className="p-3 border-b border-slate-100 font-semibold text-slate-800 text-sm flex items-center gap-2">
-            <FolderOpen className="w-4 h-4 text-slate-500" />
-            저장된 안전수칙
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {listLoading && (
@@ -221,37 +207,42 @@ export function SafetyRuleMakerPanel() {
               </div>
             )}
             {!listLoading && savedList.length === 0 && (
-              <p className="text-sm text-slate-500 p-2">저장된 항목이 없습니다. 문서 이름을 정한 뒤 저장하세요.</p>
+              <p className="text-sm text-slate-500 p-2">저장된 항목이 없습니다. &quot;새로 만들기&quot;로 첫 문서를 만들 수 있습니다.</p>
             )}
             {savedList.map((item) => {
               const t = item.updatedAt?.toDate?.() || item.createdAt?.toDate?.() || null
+              const isActive = currentId === item.id
               return (
                 <div
                   key={item.id}
-                  className={`rounded-lg border p-2 text-sm ${
-                    currentId === item.id ? 'border-brand-500 bg-brand-50' : 'border-slate-100 bg-slate-50/80'
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => loadPoster(item)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      loadPoster(item)
+                    }
+                  }}
+                  className={`rounded-lg border p-2 text-sm text-left w-full cursor-pointer transition-colors ${
+                    isActive ? 'border-brand-500 bg-brand-50' : 'border-slate-100 bg-slate-50/80 hover:border-slate-300'
                   }`}
                 >
-                  <div className="font-medium text-slate-800 truncate" title={item.name}>
-                    {item.name}
-                  </div>
-                  {t && (
-                    <div className="text-[10px] text-slate-500 mt-0.5">
-                      {format(t, 'yyyy.MM.dd HH:mm', { locale: ko })}
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-slate-800 truncate" title={item.name}>
+                        {item.name}
+                      </div>
+                      {t && (
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {format(t, 'yyyy.MM.dd HH:mm', { locale: ko })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div className="flex gap-1 mt-2">
                     <button
                       type="button"
-                      onClick={() => loadPoster(item)}
-                      className="flex-1 text-xs font-semibold py-1.5 rounded bg-slate-800 text-white hover:bg-slate-700"
-                    >
-                      불러오기
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                      onClick={(e) => handleDelete(e, item.id)}
+                      className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 shrink-0"
                       title="삭제"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -265,42 +256,92 @@ export function SafetyRuleMakerPanel() {
 
         <div className="flex-1 overflow-auto p-4 sm:p-8 flex flex-col items-center min-h-0">
           <div className="w-full max-w-4xl space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-black pb-2">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-black/40 italic">미리보기</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditorOpen(true)}
-                  className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 font-black uppercase text-[0.6rem] tracking-widest hover:bg-white hover:text-black border-2 border-black transition-all shadow-lg"
-                >
-                  <Plus className="w-3 h-3" />
-                  에디터 열기
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExportPdf}
-                  disabled={isProcessingPdf}
-                  className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 font-black uppercase text-[0.6rem] tracking-widest hover:bg-white hover:text-black border-2 border-black transition-all shadow-lg disabled:opacity-50"
-                >
-                  <Download className="w-3 h-3" />
-                  PDF 내보내기
-                </button>
+            {!isDraftMode && !showPreview && (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-white/60 p-8 text-center text-slate-600 text-sm">
+                왼쪽 <strong>저장된 안전수칙</strong>에서 항목을 선택하면 미리보기가 나타납니다. 새 문서는{' '}
+                <strong>새로 만들기</strong>로 시작하세요.
               </div>
-            </div>
-            <div className="bg-[#EAEAEA] p-6 sm:p-12 border-2 border-dashed border-black/10 flex items-center justify-center min-h-[400px]">
-              <div className="relative group w-full flex justify-center">
-                <PosterPreview content={content} />
-                <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col sm:flex-row gap-2 opacity-0 group-hover:opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditorOpen(true)}
-                    className="bg-black text-white px-3 py-1.5 sm:px-6 sm:py-2 font-black uppercase text-[0.55rem] sm:text-[0.6rem] tracking-widest border-2 border-black shadow-xl lg:hidden"
-                  >
-                    편집
-                  </button>
+            )}
+
+            {(isDraftMode || showPreview) && (
+              <>
+                <div className="space-y-2">
+                  <label className="block text-xs font-semibold text-slate-600">문서 이름</label>
+                  <input
+                    type="text"
+                    value={docName}
+                    onChange={(e) => setDocName(e.target.value)}
+                    className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none"
+                    placeholder="예: 5층 실험실 안전수칙"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-black pb-2">
+                  <h3 className="text-xs font-black uppercase tracking-[0.2em] text-black/40 italic">
+                    {showPreview ? '미리보기' : '새 문서 (이름을 정하고 저장하세요)'}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="inline-flex items-center gap-2 bg-brand-600 text-white px-4 py-2 font-black uppercase text-[0.6rem] tracking-widest border-2 border-brand-600 hover:bg-brand-700 transition-all shadow-lg disabled:opacity-50"
+                    >
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                      저장하기
+                    </button>
+                    {showPreview && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditorOpen(true)}
+                          className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 font-black uppercase text-[0.6rem] tracking-widest hover:bg-white hover:text-black border-2 border-black transition-all shadow-lg"
+                        >
+                          <Plus className="w-3 h-3" />
+                          에디터 열기
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleExportPdf}
+                          disabled={isProcessingPdf || !showPreview}
+                          className="inline-flex items-center gap-2 bg-black text-white px-4 py-2 font-black uppercase text-[0.6rem] tracking-widest hover:bg-white hover:text-black border-2 border-black transition-all shadow-lg disabled:opacity-50"
+                          title={!showPreview ? '미리보기가 있을 때 PDF로 내보낼 수 있습니다' : undefined}
+                        >
+                          <Download className="w-3 h-3" />
+                          PDF 내보내기
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {showPreview && (
+              <div className="bg-[#EAEAEA] p-4 sm:p-8 border-2 border-dashed border-black/10 flex items-start justify-center min-h-0 max-w-full">
+                <div className="w-full max-w-full flex justify-center py-2">
+                  <div className="relative group w-full max-w-[800px] border border-black shadow-sm">
+                    <PosterPreview content={content} />
+                    <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex flex-col sm:flex-row gap-2 opacity-0 group-hover:opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditorOpen(true)}
+                        className="bg-black text-white px-3 py-1.5 sm:px-6 sm:py-2 font-black uppercase text-[0.55rem] sm:text-[0.6rem] tracking-widest border-2 border-black shadow-xl lg:hidden"
+                      >
+                        편집
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {isDraftMode && !showPreview && (
+              <p className="text-sm text-slate-500">
+                문서 이름을 정한 뒤 <strong>저장하기</strong>를 누르면 Firestore에 저장되고, 아래에 미리보기가 열리며{' '}
+                <strong>에디터 열기</strong>로 내용을 이어서 편집할 수 있습니다.
+              </p>
+            )}
           </div>
         </div>
       </div>
