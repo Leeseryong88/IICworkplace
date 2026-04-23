@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { motion } from 'motion/react'
-import { Plus, Download, Save, FilePlus, FolderOpen, Trash2, AlertCircle, Loader2 } from 'lucide-react'
+import { Plus, Download, Save, FilePlus, FolderOpen, Trash2, Copy, AlertCircle, Loader2 } from 'lucide-react'
 import { PosterPreview } from './PosterPreview'
 import { PosterEditor } from './PosterEditor'
 import {
@@ -51,6 +51,10 @@ export function SafetyRuleMakerPanel() {
   const [saving, setSaving] = useState(false)
   const [isProcessingPdf, setIsProcessingPdf] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [copyModalOpen, setCopyModalOpen] = useState(false)
+  const [copySource, setCopySource] = useState<SafetyPosterRecord | null>(null)
+  const [copyDocName, setCopyDocName] = useState('')
+  const [copySaving, setCopySaving] = useState(false)
 
   const handleUpdate = useCallback((data: Partial<PosterContent>) => {
     setContent((prev) => ({ ...prev, ...data }))
@@ -120,6 +124,48 @@ export function SafetyRuleMakerPanel() {
       setError('저장에 실패했습니다. (용량·네트워크·권한을 확인하세요.)')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const openCopyModal = (e: React.MouseEvent, item: SafetyPosterRecord) => {
+    e.stopPropagation()
+    setCopySource(item)
+    setCopyDocName(`${item.name} 복사본`)
+    setCopyModalOpen(true)
+  }
+
+  const closeCopyModal = () => {
+    if (copySaving) return
+    setCopyModalOpen(false)
+    setCopySource(null)
+    setCopyDocName('')
+  }
+
+  const handleCopyConfirm = async () => {
+    if (!copySource) return
+    const name = copyDocName.trim() || '제목 없음'
+    setCopySaving(true)
+    setError(null)
+    try {
+      const ref = await addDoc(collection(db, 'safety_posters'), {
+        name,
+        content: clonePosterContent(copySource.content),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      })
+      setCurrentId(ref.id)
+      setDocName(name)
+      setContent(clonePosterContent(copySource.content))
+      setShowPreview(true)
+      setIsDraftMode(false)
+      setCopyModalOpen(false)
+      setCopySource(null)
+      setCopyDocName('')
+    } catch (err) {
+      console.error(err)
+      setError('복사본 저장에 실패했습니다.')
+    } finally {
+      setCopySaving(false)
     }
   }
 
@@ -245,14 +291,24 @@ export function SafetyRuleMakerPanel() {
                         </div>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={(e) => handleDelete(e, item.id)}
-                      className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200 shrink-0"
-                      title="삭제"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => openCopyModal(e, item)}
+                        className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-slate-100 hover:text-slate-800 hover:border-slate-300"
+                        title="복사하기"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => handleDelete(e, item.id)}
+                        className="p-1.5 rounded border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                        title="삭제"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -352,12 +408,71 @@ export function SafetyRuleMakerPanel() {
         </div>
       </div>
 
+      {copyModalOpen && copySource && (
+        <div
+          className="fixed inset-0 z-[250] flex items-center justify-center p-4 bg-black/45"
+          role="presentation"
+          onClick={(e) => e.target === e.currentTarget && closeCopyModal()}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="copy-poster-title"
+            className="w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl p-5 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="copy-poster-title" className="text-lg font-semibold text-slate-900">
+              문서 복사
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              &quot;{copySource.name}&quot;와 같은 내용으로 새 문서를 만듭니다. 새 문서 이름을 입력하세요.
+            </p>
+            <label className="mt-4 block text-xs font-semibold text-slate-600">문서 이름</label>
+            <input
+              type="text"
+              value={copyDocName}
+              onChange={(e) => setCopyDocName(e.target.value)}
+              disabled={copySaving}
+              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none disabled:opacity-60"
+              placeholder="예: 5층 실험실 안전수칙 (복사)"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') closeCopyModal()
+                if (e.key === 'Enter' && !copySaving) {
+                  e.preventDefault()
+                  void handleCopyConfirm()
+                }
+              }}
+            />
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeCopyModal}
+                disabled={copySaving}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleCopyConfirm()}
+                disabled={copySaving}
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                {copySaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                복사본 만들기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PosterEditor
         content={content}
         isOpen={isEditorOpen}
         onClose={() => setIsEditorOpen(false)}
         onUpdate={handleUpdate}
-        isProcessing={saving || isProcessingPdf}
+        isProcessing={saving || isProcessingPdf || copySaving}
       />
 
       {error && (
@@ -374,7 +489,7 @@ export function SafetyRuleMakerPanel() {
         </motion.div>
       )}
 
-      {(isProcessingPdf || saving) && (
+      {(isProcessingPdf || saving || copySaving) && (
         <div className="fixed inset-0 z-[200] bg-white/20 backdrop-blur-[2px] cursor-wait pointer-events-none" />
       )}
     </div>
