@@ -203,26 +203,71 @@ export function SafetyRuleMakerPanel() {
         import('html2canvas'),
         import('jspdf'),
       ])
+      if (document.fonts?.ready) {
+        await document.fonts.ready
+      }
+      await Promise.all(
+        Array.from(element.querySelectorAll('img'), (img) => {
+          if (img.complete) return Promise.resolve()
+          return new Promise<void>((resolve) => {
+            img.addEventListener('load', () => resolve(), { once: true })
+            img.addEventListener('error', () => resolve(), { once: true })
+          })
+        })
+      )
+
+      const captureScale = 2
+      const sourceRect = element.getBoundingClientRect()
+
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: captureScale,
         useCORS: true,
+        allowTaint: false,
         backgroundColor: '#ffffff',
-        /** 캡처 클론에서 상단 배지 영역이 잘리지 않도록 */
+        /**
+         * 클론은 iframe·부모 너비가 달라 % 패딩·max-width 계산이 화면과 달라질 수 있음.
+         * 화면과 동일한 CSS 픽셀 너·패딩을 강제해 html2canvas 레이아웃을 안정화.
+         * jsPDF는 unit:'px' 기본 스케일(핫픽스 없이)이 어긋나므로 mm로 96dpi↔pt 변환해 맞춤.
+         */
         onclone: (_doc, cloned) => {
-          cloned.style.overflow = 'visible'
+          const w = Math.max(1, Math.round(sourceRect.width))
+          const padH = w * 0.06
+          const padTop = w * 0.06
+          const padBottom = w * 0.08
+          Object.assign(cloned.style, {
+            width: `${w}px`,
+            maxWidth: `${w}px`,
+            minWidth: `${w}px`,
+            boxSizing: 'border-box',
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            paddingLeft: `${padH}px`,
+            paddingRight: `${padH}px`,
+            paddingTop: `${padTop}px`,
+            paddingBottom: `${padBottom}px`,
+            overflow: 'visible',
+            backgroundColor: '#ffffff',
+            color: '#000000',
+          })
           const badgeRow = cloned.firstElementChild as HTMLElement | null
           if (badgeRow) badgeRow.style.overflow = 'visible'
         },
       })
 
-      const imgData = canvas.toDataURL('image/png')
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
-      })
+      const imgData = canvas.toDataURL('image/png', 1.0)
+      const cssW = Math.max(1, canvas.width / captureScale)
+      const cssH = Math.max(1, canvas.height / captureScale)
+      const toMm = (px: number) => (px * 25.4) / 96
+      const mmW = toMm(cssW)
+      const mmH = toMm(cssH)
 
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height)
+      const pdf = new jsPDF({
+        orientation: mmH >= mmW ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [mmW, mmH],
+        compress: true,
+      })
+      pdf.addImage(imgData, 'PNG', 0, 0, mmW, mmH, undefined, 'FAST')
       const safe = docName.replace(/[\\/:*?"<>|]/g, '_') || 'safety_poster'
       pdf.save(`${safe}.pdf`)
     } catch (err) {
