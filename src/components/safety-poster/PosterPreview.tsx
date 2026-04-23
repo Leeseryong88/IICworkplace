@@ -50,15 +50,15 @@ export function PosterPreview({ content }: PosterPreviewProps) {
             <div key={idx} className="flex flex-col gap-3 text-center px-4">
               <div className="flex items-center justify-center">
                 <div
-                  className={`w-28 h-28 flex items-center justify-center text-white overflow-hidden ${
-                    action.imageUrl ? 'bg-transparent' : 'bg-black'
+                  className={`w-28 h-28 flex items-center justify-center text-white ${
+                    action.imageUrl ? 'bg-transparent' : 'bg-black overflow-hidden'
                   }`}
                 >
                   {action.imageUrl ? (
                     <img
                       src={action.imageUrl}
                       alt={action.title}
-                      className="block h-full w-full border-0 object-cover outline-none shadow-none"
+                      className="block max-h-full max-w-full h-auto w-auto border-0 object-contain outline-none shadow-none"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
