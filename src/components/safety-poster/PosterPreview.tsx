@@ -13,10 +13,10 @@ export function PosterPreview({ content }: PosterPreviewProps) {
   return (
     <div
       id="safety-poster"
-      className="w-full max-w-[800px] mx-auto h-auto min-h-0 bg-white px-[6%] pt-[6%] pb-[8%] flex flex-col gap-4 sm:gap-5 text-black leading-tight"
+      className="w-full max-w-[800px] mx-auto h-auto bg-white px-[6%] pt-[6%] pb-[8%] flex flex-col gap-4 sm:gap-5 text-black leading-tight overflow-visible"
     >
-      <div className="flex justify-start items-center border-b-2 border-black pb-2">
-        <div className="text-[0.65rem] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5">
+      <div className="flex justify-start items-end border-b-2 border-black pb-2.5 gap-2 overflow-visible">
+        <div className="text-[0.65rem] font-black uppercase tracking-widest bg-black text-white px-2.5 py-1.5 leading-normal inline-flex items-center shrink-0 overflow-visible [print-color-adjust:exact]">
           {content.sloganTop}
         </div>
       </div>

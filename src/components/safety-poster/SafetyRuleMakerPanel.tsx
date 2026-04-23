@@ -161,6 +161,12 @@ export function SafetyRuleMakerPanel() {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
+        /** 캡처 클론에서 상단 배지 영역이 잘리지 않도록 */
+        onclone: (_doc, cloned) => {
+          cloned.style.overflow = 'visible'
+          const badgeRow = cloned.firstElementChild as HTMLElement | null
+          if (badgeRow) badgeRow.style.overflow = 'visible'
+        },
       })
 
       const imgData = canvas.toDataURL('image/png')
