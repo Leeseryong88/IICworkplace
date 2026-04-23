@@ -45,12 +45,16 @@ export function PosterPreview({ content }: PosterPreviewProps) {
           {content.coreActions.slice(0, 3).map((action, idx) => (
             <div key={idx} className="flex flex-col gap-3 text-center px-4">
               <div className="flex items-center justify-center">
-                <div className="w-28 h-28 bg-black flex items-center justify-center text-white shadow-lg overflow-hidden">
+                <div
+                  className={`w-28 h-28 flex items-center justify-center text-white overflow-hidden ${
+                    action.imageUrl ? 'bg-transparent' : 'bg-black'
+                  }`}
+                >
                   {action.imageUrl ? (
                     <img
                       src={action.imageUrl}
                       alt={action.title}
-                      className="w-full h-full object-cover"
+                      className="block h-full w-full border-0 object-cover outline-none shadow-none"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
